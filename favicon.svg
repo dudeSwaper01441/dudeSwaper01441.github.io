@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="32" fill="#1a237e"/>
+
+  <!-- Graduation cap - brim (diamond shape) -->
+  <polygon points="32,14 52,24 32,34 12,24" fill="#ffffff"/>
+
+  <!-- Cap top (board) -->
+  <polygon points="32,14 52,24 32,34 12,24" fill="#ffffff" opacity="0.95"/>
+
+  <!-- Left side of cap top shading -->
+  <polygon points="32,14 12,24 32,34" fill="#c5cae9" opacity="0.5"/>
+
+  <!-- Tassel string -->
+  <line x1="52" y1="24" x2="52" y2="36" stroke="#fdd835" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Tassel ball -->
+  <circle cx="52" cy="37" r="3" fill="#fdd835"/>
+
+  <!-- Tassel fringe -->
+  <line x1="50" y1="40" x2="49" y2="45" stroke="#fdd835" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="52" y1="40" x2="52" y2="46" stroke="#fdd835" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="54" y1="40" x2="55" y2="45" stroke="#fdd835" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Cap body (cylinder below brim) -->
+  <path d="M22,26 L22,36 Q32,40 42,36 L42,26 Q32,30 22,26 Z" fill="#3949ab"/>
+</svg>
