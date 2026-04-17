@@ -11,11 +11,44 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ── THEME VARIABLES ── */
+    :root {
+      --bg:        #f0f2f5;
+      --card:      #ffffff;
+      --text:      #333333;
+      --text-sub:  #666666;
+      --border:    #e0e0e0;
+      --input-bg:  #fafafa;
+      --tab-bg:    #f0f2f5;
+      --chip-bg:   #e8eaf6;
+      --chip-text: #283593;
+      --detail-bg: #f5f7ff;
+      --detail-bd: #c5cae9;
+      --row-hover: #f8f9ff;
+      --shadow:    rgba(0,0,0,0.07);
+    }
+    body.dark {
+      --bg:        #0f1117;
+      --card:      #1a1d27;
+      --text:      #e8eaf6;
+      --text-sub:  #9fa8da;
+      --border:    #2e3250;
+      --input-bg:  #12151f;
+      --tab-bg:    #12151f;
+      --chip-bg:   #1e2240;
+      --chip-text: #9fa8da;
+      --detail-bg: #12151f;
+      --detail-bd: #2e3250;
+      --row-hover: #1e2240;
+      --shadow:    rgba(0,0,0,0.35);
+    }
+
     body {
       font-family: 'Sarabun', sans-serif;
-      background: #f0f2f5;
-      color: #333;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
+      transition: background .3s, color .3s;
     }
 
     /* ── HEADER ── */
@@ -33,11 +66,12 @@
 
     /* ── CARD ── */
     .card {
-      background: #fff;
+      background: var(--card);
       border-radius: 14px;
-      box-shadow: 0 2px 14px rgba(0,0,0,0.07);
+      box-shadow: 0 2px 14px var(--shadow);
       padding: 24px;
       margin-bottom: 20px;
+      transition: background .3s;
     }
     .card-title {
       font-size: 1rem;
@@ -48,12 +82,13 @@
       align-items: center;
       gap: 8px;
     }
+    body.dark .card-title { color: #9fa8da; }
 
     /* ── TABS ── */
     .tabs {
       display: flex;
       gap: 4px;
-      background: #f0f2f5;
+      background: var(--tab-bg);
       padding: 4px;
       border-radius: 10px;
       margin-bottom: 18px;
@@ -67,14 +102,14 @@
       font-family: 'Sarabun', sans-serif;
       font-size: 0.88rem;
       background: transparent;
-      color: #666;
+      color: var(--text-sub);
       transition: all .2s;
     }
     .tab-btn.active {
-      background: #fff;
-      color: #1a237e;
+      background: var(--card);
+      color: #3949ab;
       font-weight: 700;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 5px var(--shadow);
     }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
@@ -84,15 +119,16 @@
     input[type="text"], input[type="url"], select, textarea {
       width: 100%;
       padding: 10px 14px;
-      border: 1.5px solid #e0e0e0;
+      border: 1.5px solid var(--border);
       border-radius: 9px;
       font-family: 'Sarabun', sans-serif;
       font-size: 0.9rem;
       outline: none;
-      transition: border-color .2s;
-      background: #fafafa;
+      transition: border-color .2s, background .3s, color .3s;
+      background: var(--input-bg);
+      color: var(--text);
     }
-    input:focus, select:focus, textarea:focus { border-color: #3949ab; background: #fff; }
+    input:focus, select:focus, textarea:focus { border-color: #3949ab; background: var(--card); }
 
     /* ── BUTTONS ── */
     .btn {
@@ -118,7 +154,7 @@
     .btn-sm { padding: 6px 13px; font-size: 0.82rem; border-radius: 7px; }
 
     /* ── HINT ── */
-    .hint { font-size: 0.82rem; color: #888; margin-bottom: 12px; line-height: 1.5; }
+    .hint { font-size: 0.82rem; color: var(--text-sub); margin-bottom: 12px; line-height: 1.5; }
 
     /* ── COLUMN MAPPER ── */
     #column-mapper { display: none; }
@@ -127,7 +163,7 @@
       grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
       gap: 12px;
     }
-    .mapper-item label { font-size: 0.82rem; color: #555; margin-bottom: 5px; display: block; font-weight: 600; }
+    .mapper-item label { font-size: 0.82rem; color: var(--text-sub); margin-bottom: 5px; display: block; font-weight: 600; }
 
     /* ── CONTROLS ROW ── */
     .controls-row {
@@ -137,13 +173,13 @@
       flex-wrap: wrap;
       margin-bottom: 18px;
     }
-    .ctrl-group label { font-size: 0.78rem; color: #888; display: block; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .ctrl-group label { font-size: 0.78rem; color: var(--text-sub); display: block; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
 
     /* ── CHART TYPE SWITCHER ── */
     .chart-type-btns {
       display: flex;
       gap: 3px;
-      background: #f0f2f5;
+      background: var(--tab-bg);
       padding: 4px;
       border-radius: 9px;
     }
@@ -155,22 +191,22 @@
       font-family: 'Sarabun', sans-serif;
       font-size: 0.84rem;
       background: transparent;
-      color: #666;
+      color: var(--text-sub);
       transition: all .18s;
     }
     .chart-type-btn.active {
-      background: #fff;
-      color: #1a237e;
+      background: var(--card);
+      color: #3949ab;
       font-weight: 700;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 4px var(--shadow);
     }
 
     /* ── STATS BAR ── */
     .stats-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
     .stat-chip {
       padding: 6px 16px;
-      background: #e8eaf6;
-      color: #283593;
+      background: var(--chip-bg);
+      color: var(--chip-text);
       border-radius: 20px;
       font-size: 0.84rem;
       font-weight: 700;
@@ -182,13 +218,14 @@
       align-items: center;
       gap: 7px;
       font-size: 0.88rem;
-      color: #888;
+      color: var(--text-sub);
       margin-bottom: 14px;
       flex-wrap: wrap;
     }
     .crumb { cursor: pointer; color: #3949ab; }
+    body.dark .crumb { color: #7986cb; }
     .crumb:hover { text-decoration: underline; }
-    .crumb.current { color: #333; cursor: default; font-weight: 600; }
+    .crumb.current { color: var(--text); cursor: default; font-weight: 600; }
     .sep { color: #bbb; }
 
     /* ── CHART WRAPPER ── */
@@ -205,11 +242,12 @@
       display: none;
       margin-top: 18px;
       padding: 18px;
-      background: #f5f7ff;
+      background: var(--detail-bg);
       border-radius: 10px;
-      border: 1.5px solid #c5cae9;
+      border: 1.5px solid var(--detail-bd);
     }
-    #detail-panel h3 { font-size: 0.95rem; color: #1a237e; margin-bottom: 12px; }
+    #detail-panel h3 { font-size: 0.95rem; color: #3949ab; margin-bottom: 12px; }
+    body.dark #detail-panel h3 { color: #9fa8da; }
     .detail-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -220,15 +258,15 @@
       justify-content: space-between;
       align-items: center;
       padding: 9px 13px;
-      background: #fff;
+      background: var(--card);
       border-radius: 7px;
-      border: 1px solid #e8eaf6;
+      border: 1px solid var(--border);
       font-size: 0.87rem;
       cursor: pointer;
       transition: border-color .15s;
     }
     .detail-item:hover { border-color: #3949ab; }
-    .detail-item .name { color: #333; flex: 1; margin-right: 8px; }
+    .detail-item .name { color: var(--text); flex: 1; margin-right: 8px; }
     .detail-item .badge {
       background: #1a237e;
       color: #fff;
@@ -252,17 +290,18 @@
       font-weight: 600;
       font-size: 0.82rem;
     }
-    td { padding: 5px 7px; border-bottom: 1px solid #f0f2f5; }
+    td { padding: 5px 7px; border-bottom: 1px solid var(--border); color: var(--text); }
     td input {
       width: 100%;
       padding: 5px 9px;
-      border: 1px solid #e0e0e0;
+      border: 1px solid var(--border);
       border-radius: 5px;
       font-family: 'Sarabun', sans-serif;
       font-size: 0.86rem;
-      background: transparent;
+      background: var(--input-bg);
+      color: var(--text);
     }
-    tr:hover td { background: #f8f9ff; }
+    tr:hover td { background: var(--row-hover); }
 
     /* ── ALERT ── */
     .alert {
@@ -296,9 +335,66 @@
     footer {
       text-align: center;
       padding: 28px 16px;
-      color: #bbb;
+      color: var(--text-sub);
       font-size: 0.83rem;
     }
+
+    /* ── HEADER ACTIONS ── */
+    header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .header-text h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.5px; }
+    .header-text p  { font-size: 0.9rem; opacity: 0.75; margin-top: 4px; }
+    .header-actions { display: flex; gap: 8px; }
+    .icon-btn {
+      width: 38px; height: 38px;
+      border: none; border-radius: 10px;
+      background: rgba(255,255,255,0.15);
+      color: #fff; font-size: 1.1rem;
+      cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.28); }
+
+    /* ── SETTINGS PANEL ── */
+    #settings-panel {
+      display: none;
+      background: var(--card);
+      border-radius: 14px;
+      box-shadow: 0 2px 14px var(--shadow);
+      padding: 24px;
+      margin-bottom: 20px;
+      transition: background .3s;
+    }
+    #settings-panel.open { display: block; }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-label { font-weight: 600; font-size: 0.95rem; }
+    .settings-desc  { font-size: 0.82rem; color: var(--text-sub); margin-top: 2px; }
+
+    /* toggle switch */
+    .toggle { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0;
+      background: #ccc; border-radius: 26px;
+      cursor: pointer; transition: background .25s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute;
+      width: 20px; height: 20px; border-radius: 50%;
+      left: 3px; top: 3px;
+      background: #fff;
+      transition: transform .25s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .toggle input:checked + .toggle-slider { background: #3949ab; }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
     footer .heart { color: #e91e63; animation: heartbeat 1.2s ease-in-out infinite; display: inline-block; }
     @keyframes heartbeat {
       0%,100% { transform: scale(1); }
@@ -317,11 +413,31 @@
 <body>
 
 <header>
-  <h1>🎓 Thailand TCAS Admissions Dashboard</h1>
-  <p>Explore student preferences by dek year · faculty · program</p>
+  <div class="header-text">
+    <h1>🎓 Thailand TCAS Admissions Dashboard</h1>
+    <p>Explore student preferences by dek year · faculty · program</p>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="toggleSettings()" title="Settings">⚙️</button>
+  </div>
 </header>
 
 <div class="container">
+
+  <!-- ══════════════════ SETTINGS ══════════════════ -->
+  <div id="settings-panel">
+    <div class="card-title">⚙️ Settings</div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">🌙 Dark Theme</div>
+        <div class="settings-desc">Switch to a dark color scheme</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="dark-toggle" onchange="applyTheme(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
 
   <!-- ══════════════════ DATA SOURCE ══════════════════ -->
   <div class="card">
@@ -524,27 +640,72 @@ async function loadFromSheets() {
   const alrt = document.getElementById('sheets-alert');
   if (!url) { showAlert(alrt,'Please enter a Google Sheets URL.','error'); return; }
 
+  // If it's already a "Publish to web" URL (/d/e/...), use it directly
+  const isPubUrl = /\/spreadsheets\/d\/e\//.test(url);
+  if (isPubUrl) {
+    // Ensure output=csv is set
+    let csvUrl = url.includes('output=csv') ? url : url.replace(/output=\w+/, 'output=csv');
+    if (!csvUrl.includes('output=')) csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'output=csv';
+    showAlert(alrt,'<div class="loading"><div class="spinner"></div> Fetching sheet…</div>','info');
+    try {
+      const res = await fetch(csvUrl, { redirect: 'follow' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      if (text.trimStart().startsWith('<')) throw new Error('Got HTML — make sure you published as CSV.');
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      if (!parsed.data.length) { showAlert(alrt,'Sheet appears empty.','error'); return; }
+      state.rawData = parsed.data;
+      state.columns = parsed.meta.fields || [];
+      showAlert(alrt,`✅ Loaded ${parsed.data.length} rows · ${state.columns.length} columns.`,'success');
+      showColumnMapper();
+    } catch(e) { showAlert(alrt,`Error: ${e.message}`,'error'); }
+    return;
+  }
+
   const idM = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
   if (!idM) { showAlert(alrt,'Invalid Google Sheets URL.','error'); return; }
 
   const id  = idM[1];
   const gid = (url.match(/gid=(\d+)/) || [])[1] || '0';
-  const csv = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+
+  // Try /pub endpoint first (handles redirects better), then fall back to /export
+  const urls = [
+    `https://docs.google.com/spreadsheets/d/${id}/pub?output=csv&gid=${gid}`,
+    `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`,
+  ];
 
   showAlert(alrt,'<div class="loading"><div class="spinner"></div> Fetching sheet…</div>','info');
-  try {
-    const res = await fetch(csv);
-    if (!res.ok) throw new Error(`HTTP ${res.status} — make sure the sheet is publicly shared.`);
-    const text = await res.text();
-    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
-    if (!parsed.data.length) { showAlert(alrt,'Sheet appears empty.','error'); return; }
-    state.rawData = parsed.data;
-    state.columns = parsed.meta.fields || [];
-    showAlert(alrt,`✅ Loaded ${parsed.data.length} rows · ${state.columns.length} columns.`,'success');
-    showColumnMapper();
-  } catch(e) {
-    showAlert(alrt,`Error: ${e.message}`,'error');
+
+  let lastErr = '';
+  for (const csvUrl of urls) {
+    try {
+      const res = await fetch(csvUrl, { redirect: 'follow' });
+      if (!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
+      const text = await res.text();
+      // Google sometimes returns an HTML error page instead of CSV
+      if (text.trimStart().startsWith('<')) {
+        lastErr = 'Got HTML instead of CSV — sheet may not be published publicly.';
+        continue;
+      }
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      if (!parsed.data.length) { showAlert(alrt,'Sheet appears empty.','error'); return; }
+      state.rawData = parsed.data;
+      state.columns = parsed.meta.fields || [];
+      showAlert(alrt,`✅ Loaded ${parsed.data.length} rows · ${state.columns.length} columns.`,'success');
+      showColumnMapper();
+      return;
+    } catch(e) {
+      lastErr = e.message;
+    }
   }
+
+  // Both URLs failed — show help
+  showAlert(alrt,`
+    <strong>Could not load sheet.</strong> Last error: ${lastErr}<br><br>
+    Try the <strong>Publish to web</strong> method instead:<br>
+    In Google Sheets → <em>File → Share → Publish to web → Sheet1 → CSV → Publish</em><br>
+    Then paste that link here.
+  `, 'error');
 }
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -944,8 +1105,28 @@ function showAlert(el, msg, type) {
 // ╔══════════════════════════════════════════════════════════╗
 // ║  INIT                                                    ║
 // ╚══════════════════════════════════════════════════════════╝
+// ╔══════════════════════════════════════════════════════════╗
+// ║  SETTINGS & THEME                                        ║
+// ╚══════════════════════════════════════════════════════════╝
+function toggleSettings() {
+  document.getElementById('settings-panel').classList.toggle('open');
+}
+
+function applyTheme(dark) {
+  document.body.classList.toggle('dark', dark);
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+  // Re-render chart so Chart.js picks up new colors
+  if (state.chart) renderChart(getProcessed());
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   for (let i = 0; i < 4; i++) addManualRow();
+  // Restore saved theme
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark') {
+    document.body.classList.add('dark');
+    document.getElementById('dark-toggle').checked = true;
+  }
 });
 </script>
 </body>
