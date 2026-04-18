@@ -248,6 +248,30 @@
     #chart-wrapper { position: relative; height: 430px; display: flex; justify-content: center; }
     #chart-wrapper canvas { max-height: 430px; }
 
+    /* ── CUSTOM LEGEND ── */
+    #custom-legend {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 3px 10px;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: var(--detail-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .leg-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 6px; border-radius: 6px; cursor: pointer;
+      font-size: 0.82rem; transition: background .15s;
+      min-width: 0;
+    }
+    .leg-item:hover { background: var(--chip-bg); }
+    .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .leg-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .leg-pct { color: var(--text-sub); font-size: 0.75rem; flex-shrink: 0; }
+
     /* ── DETAIL PANEL ── */
     #detail-panel {
       display: none; margin-top: 18px; padding: 18px;
@@ -442,6 +466,7 @@
       <span class="crumb current">All Dek Years</span>
     </div>
     <div id="chart-wrapper"><canvas id="main-chart"></canvas></div>
+    <div id="custom-legend"></div>
     <div id="detail-panel">
       <h3 id="detail-title"></h3>
       <div class="detail-grid" id="detail-grid"></div>
@@ -1001,12 +1026,13 @@ function renderChart(data){
   else{agg=aggregate(data.filter(r=>r.dek===state.drillDown.dek&&r.faculty===state.drillDown.faculty),'program');}
   const labels=agg.map(d=>d.label),values=agg.map(d=>d.value);
   const isRound=['pie','doughnut'].includes(state.chartType);
+  const manyItems = labels.length > 8;
   state.chart=new Chart(ctx,{
     type:state.chartType,
     data:{labels,datasets:[{data:values,backgroundColor:labels.map((_,i)=>colA(i,.84)),borderColor:isRound?'#fff':labels.map((_,i)=>col(i)),borderWidth:isRound?2:1.5,borderRadius:state.chartType==='bar'?7:0,hoverOffset:isRound?10:0}]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{
-        legend:{position:isRound?'right':'top',labels:{font:{family:'Sarabun',size:12},padding:14,usePointStyle:true}},
+        legend:{display:!(isRound&&manyItems),position:isRound?'right':'top',labels:{font:{family:'Sarabun',size:12},padding:14,usePointStyle:true}},
         tooltip:{callbacks:{
           label:ctx=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return ` ${ctx.label}: ${ctx.formattedValue} (${((ctx.parsed/t)*100).toFixed(1)}%)`;},
           afterLabel:ctx=>{
@@ -1020,9 +1046,24 @@ function renderChart(data){
         },bodyFont:{family:'Sarabun',size:13},titleFont:{family:'Sarabun',size:13}}
       },
       onClick:(_,elements)=>{if(!elements.length)return;handleClick(labels[elements[0].index]);},
+
       scales:!isRound?{x:{ticks:{font:{family:'Sarabun'}},grid:{color:'rgba(0,0,0,0.05)'}},y:{ticks:{font:{family:'Sarabun'}},grid:{color:'rgba(0,0,0,0.05)'},beginAtZero:true}}:{}
     }
   });
+  renderCustomLegend(labels, values, isRound && manyItems);
+}
+
+function renderCustomLegend(labels, values, show){
+  const el=document.getElementById('custom-legend');
+  if(!show){el.style.display='none';return;}
+  const total=values.reduce((a,b)=>a+b,0);
+  el.style.display='grid';
+  el.innerHTML=labels.map((lbl,i)=>`
+    <div class="leg-item" onclick="handleClick('${lbl.replace(/'/g,"\\'")}')">
+      <span class="leg-dot" style="background:${col(i)};"></span>
+      <span class="leg-name" title="${lbl}">${lbl}</span>
+      <span class="leg-pct">${total>0?((values[i]/total)*100).toFixed(1)+'%':''}</span>
+    </div>`).join('');
 }
 
 function handleClick(label){
