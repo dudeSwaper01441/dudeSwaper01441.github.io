@@ -175,8 +175,13 @@
 
     /* ── COLUMN MAPPER ── */
     #column-mapper { display: none; }
-    .mapper-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+    .mapper-grid { display: flex; flex-direction: column; gap: 10px; }
     .mapper-item label { font-size: 0.82rem; color: var(--text-sub); margin-bottom: 5px; display: block; font-weight: 600; }
+    .mapper-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .mapper-row select { flex: 1; min-width: 160px; }
+    .mapper-lbl-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .mapper-lbl-wrap span { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
+    .mapper-lbl-wrap input { width: 120px; font-size: 0.85rem; }
 
     /* ── CONTROLS ── */
     .controls-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 18px; }
@@ -409,6 +414,7 @@
 const state = {
   rawData:[], columns:[],
   mapping:{ dek:null, faculty:null, program:null, university:null, count:null },
+  labels:{ dek:'Dek Year', faculty:'Faculty', program:'Program', university:'University' },
   filters:{ university:'all' },
   drillDown:null, chartType:'pie', chart:null,
 };
@@ -658,24 +664,41 @@ function loadSampleData(){
 
 /* ── COLUMN MAPPER ── */
 const GUESS={dek:['dek','year','ปี'],faculty:['faculty','คณะ','fac'],program:['program','major','สาขา'],university:['university','uni','มหาวิทยาลัย'],count:['count','total','n','จำนวน']};
+const DEF_LABELS={dek:'Dek Year',faculty:'Faculty',program:'Program',university:'University'};
 function autoGuess(field,col){return(GUESS[field]||[]).some(g=>col.toLowerCase().includes(g));}
 function showColumnMapper(){
   document.getElementById('column-mapper').style.display='block';
-  const fields=[{key:'dek',label:'Dek Year *',req:true},{key:'faculty',label:'Faculty *',req:true},{key:'program',label:'Program',req:false},{key:'university',label:'University',req:false},{key:'count',label:'Count (blank=each row=1)',req:false}];
+  const fields=[
+    {key:'dek',      label:'Group / Dek Year *',        req:true,  hasLbl:true},
+    {key:'faculty',  label:'Level 1 / Faculty *',        req:true,  hasLbl:true},
+    {key:'program',  label:'Level 2 / Program',          req:false, hasLbl:true},
+    {key:'university',label:'Filter / University',       req:false, hasLbl:true},
+    {key:'count',    label:'Count (blank = each row = 1)',req:false, hasLbl:false},
+  ];
   document.getElementById('mapper-grid').innerHTML=fields.map(f=>`
-    <div class="mapper-item"><label>${f.label}</label>
-    <select id="map-${f.key}">
-      <option value="">— ${f.req?'Required':'Optional'} —</option>
-      ${state.columns.map(c=>`<option value="${c}" ${autoGuess(f.key,c)?'selected':''}>${c}</option>`).join('')}
-    </select></div>`).join('');
+    <div class="mapper-item">
+      <label>${f.label}</label>
+      <div class="mapper-row">
+        <select id="map-${f.key}">
+          <option value="">— ${f.req?'Required':'Optional'} —</option>
+          ${state.columns.map(c=>`<option value="${c}" ${autoGuess(f.key,c)?'selected':''}>${c}</option>`).join('')}
+        </select>
+        ${f.hasLbl?`<div class="mapper-lbl-wrap"><span>Display as</span><input type="text" id="lbl-${f.key}" value="${state.labels[f.key]||DEF_LABELS[f.key]}" placeholder="${DEF_LABELS[f.key]}"></div>`:''}
+      </div>
+    </div>`).join('');
   document.getElementById('column-mapper').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function applyMapping(skipUI=false){
   if(!skipUI){
     ['dek','faculty','program','university','count'].forEach(k=>{state.mapping[k]=document.getElementById(`map-${k}`)?.value||null;});
+    // Read custom display labels
+    ['dek','faculty','program','university'].forEach(k=>{
+      const v=document.getElementById(`lbl-${k}`)?.value.trim();
+      if(v)state.labels[k]=v;
+    });
     const alrt=document.getElementById('mapper-alert');
-    if(!state.mapping.dek){showAlert(alrt,'Please select the Dek Year column.','error');return;}
-    if(!state.mapping.faculty){showAlert(alrt,'Please select the Faculty column.','error');return;}
+    if(!state.mapping.dek){showAlert(alrt,`Please select the ${state.labels.dek} column.`,'error');return;}
+    if(!state.mapping.faculty){showAlert(alrt,`Please select the ${state.labels.faculty} column.`,'error');return;}
   }
   buildAndRender();
 }
@@ -697,14 +720,17 @@ function aggregate(data,key){
 /* ── BUILD & RENDER ── */
 function buildAndRender(){
   const data=getProcessed();
+  const L=state.labels;
   if(state.mapping.university){
     const unis=[...new Set(state.rawData.map(r=>r[state.mapping.university]).filter(Boolean))].sort();
     const sel=document.getElementById('university-filter');const prev=sel.value;
-    sel.innerHTML='<option value="all">All Universities</option>'+unis.map(u=>`<option value="${u}" ${u===prev?'selected':''}>${u}</option>`).join('');
+    sel.innerHTML=`<option value="all">All ${L.university}</option>`+unis.map(u=>`<option value="${u}" ${u===prev?'selected':''}>${u}</option>`).join('');
+    const uniLabel=document.querySelector('#uni-filter-wrap label');
+    if(uniLabel)uniLabel.textContent=L.university;
     document.getElementById('uni-filter-wrap').style.display='';
   }else{document.getElementById('uni-filter-wrap').style.display='none';}
   const total=data.reduce((s,r)=>s+r.count,0),dekCount=new Set(data.map(r=>r.dek)).size,facCount=new Set(data.map(r=>r.faculty)).size;
-  document.getElementById('stats-bar').innerHTML=`<div class="stat-chip">👥 ${total.toLocaleString()} entries</div><div class="stat-chip">📅 ${dekCount} dek year${dekCount>1?'s':''}</div><div class="stat-chip">🏫 ${facCount} facult${facCount>1?'ies':'y'}</div>`;
+  document.getElementById('stats-bar').innerHTML=`<div class="stat-chip">👥 ${total.toLocaleString()} entries</div><div class="stat-chip">📅 ${dekCount} ${L.dek}${dekCount>1?'s':''}</div><div class="stat-chip">🏫 ${facCount} ${L.faculty}${facCount>1?'s':''}</div>`;
   document.getElementById('chart-panel').style.display='block';
   document.getElementById('column-mapper').style.display='none';
   state.drillDown=null;document.getElementById('detail-panel').style.display='none';
@@ -730,12 +756,12 @@ function renderChart(data){
         tooltip:{callbacks:{
           label:ctx=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return ` ${ctx.label}: ${ctx.formattedValue} (${((ctx.parsed/t)*100).toFixed(1)}%)`;},
           afterLabel:ctx=>{
-            const d2=getProcessed();const lbl=ctx.label;let subset,gk;
-            if(!state.drillDown){subset=d2.filter(r=>r.dek===lbl);gk='faculty';}
-            else if(state.drillDown.level==='faculty'){subset=d2.filter(r=>r.dek===state.drillDown.dek&&r.faculty===lbl);gk='program';}
+            const d2=getProcessed();const lbl=ctx.label;let subset,gk,gkLabel;
+            if(!state.drillDown){subset=d2.filter(r=>r.dek===lbl);gk='faculty';gkLabel=state.labels.faculty;}
+            else if(state.drillDown.level==='faculty'){subset=d2.filter(r=>r.dek===state.drillDown.dek&&r.faculty===lbl);gk='program';gkLabel=state.labels.program;}
             else return '';
             const top=aggregate(subset,gk).slice(0,3);
-            return top.length?['',`Top ${gk}s:`,...top.map(a=>`  • ${a.label}: ${a.value}`)]:'';
+            return top.length?['',`Top ${gkLabel}:`,...top.map(a=>`  • ${a.label}: ${a.value}`)]:'';
           }
         },bodyFont:{family:'Sarabun',size:13},titleFont:{family:'Sarabun',size:13}}
       },
@@ -746,14 +772,14 @@ function renderChart(data){
 }
 
 function handleClick(label){
-  const data=getProcessed();
+  const data=getProcessed();const L=state.labels;
   if(!state.drillDown){
     state.drillDown={level:'faculty',dek:label};updateBreadcrumb();renderChart(data);
-    showDetail(`📚 Faculties — ${label}`,aggregate(data.filter(r=>r.dek===label),'faculty'));
+    showDetail(`📚 ${L.faculty} — ${label}`,aggregate(data.filter(r=>r.dek===label),'faculty'));
   }else if(state.drillDown.level==='faculty'){
     if(!state.mapping.program)return;
     state.drillDown={level:'program',dek:state.drillDown.dek,faculty:label};updateBreadcrumb();renderChart(data);
-    showDetail(`📖 Programs — ${label} (${state.drillDown.dek})`,aggregate(data.filter(r=>r.dek===state.drillDown.dek&&r.faculty===label),'program'));
+    showDetail(`📖 ${L.program} — ${label} (${state.drillDown.dek})`,aggregate(data.filter(r=>r.dek===state.drillDown.dek&&r.faculty===label),'program'));
   }
 }
 function showDetail(title,agg){
@@ -764,16 +790,16 @@ function showDetail(title,agg){
   document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function updateBreadcrumb(){
-  const bc=document.getElementById('breadcrumb'),d=state.drillDown;
-  if(!d){bc.innerHTML=`<span class="crumb current">All Dek Years</span>`;}
-  else if(d.level==='faculty'){bc.innerHTML=`<span class="crumb" onclick="resetToTop()">All Dek Years</span><span class="sep">›</span><span class="crumb current">${d.dek} — Faculties</span>`;}
-  else{bc.innerHTML=`<span class="crumb" onclick="resetToTop()">All Dek Years</span><span class="sep">›</span><span class="crumb" onclick="drillToFaculty()">${d.dek} — Faculties</span><span class="sep">›</span><span class="crumb current">${d.faculty} — Programs</span>`;}
+  const bc=document.getElementById('breadcrumb'),d=state.drillDown,L=state.labels;
+  if(!d){bc.innerHTML=`<span class="crumb current">All ${L.dek}s</span>`;}
+  else if(d.level==='faculty'){bc.innerHTML=`<span class="crumb" onclick="resetToTop()">All ${L.dek}s</span><span class="sep">›</span><span class="crumb current">${d.dek} — ${L.faculty}</span>`;}
+  else{bc.innerHTML=`<span class="crumb" onclick="resetToTop()">All ${L.dek}s</span><span class="sep">›</span><span class="crumb" onclick="drillToFaculty()">${d.dek} — ${L.faculty}</span><span class="sep">›</span><span class="crumb current">${d.faculty} — ${L.program}</span>`;}
 }
 function drillToFaculty(){
   const dek=state.drillDown?.dek;if(!dek)return;
   state.drillDown={level:'faculty',dek};updateBreadcrumb();
   const data=getProcessed();renderChart(data);
-  showDetail(`📚 Faculties — ${dek}`,aggregate(data.filter(r=>r.dek===dek),'faculty'));
+  showDetail(`📚 ${state.labels.faculty} — ${dek}`,aggregate(data.filter(r=>r.dek===dek),'faculty'));
 }
 function resetToTop(){state.drillDown=null;document.getElementById('detail-panel').style.display='none';updateBreadcrumb();renderChart(getProcessed());}
 function setChartType(type){
