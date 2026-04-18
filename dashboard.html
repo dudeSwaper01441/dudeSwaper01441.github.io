@@ -320,7 +320,8 @@
 
     <div id="tab-sheets" class="tab-content active">
       <p class="hint">Paste your Google Sheets share link. The sheet must be <strong>"Anyone with the link can view"</strong> or published as CSV.<br>
-      Expected columns: <code>dek | university | faculty | program | count</code></p>
+      Expected columns: <code>dek | university | faculty | program | count</code><br>
+      <strong>✨ Google Forms CSV supported!</strong> — if you export your Google Form responses, just paste the link and the app will auto-detect and transform it.</p>
       <div class="input-row">
         <input type="url" id="sheets-url" placeholder="https://docs.google.com/spreadsheets/d/…">
         <button class="btn btn-primary" onclick="loadFromSheets()">Load</button>
@@ -337,6 +338,7 @@
           📁 Import CSV <input type="file" accept=".csv" style="display:none" onchange="importCSV(this)">
         </label>
       </div>
+      <div id="manual-alert"></div>
       <div id="manual-table-wrap">
         <table id="manual-table">
           <thead>
@@ -444,6 +446,106 @@ const hex2rgba=(hex,a)=>{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slic
 const col=i=>PALETTE[i%PALETTE.length];
 const colA=(i,a=0.82)=>hex2rgba(col(i),a);
 
+/* ══════════════════════════════════════════════
+   GOOGLE FORMS AUTO-TRANSFORMER
+   Detects Thai Google Forms survey CSVs and converts
+   them into the dek/faculty/count format automatically.
+   ══════════════════════════════════════════════ */
+const FORMS_SIGS=['ประทับเวลา','เป็น dek','อยากเข้าคณะ'];
+const FAC_CANONICAL={
+  // แพทย์
+  'แพทยศาสตร์':'แพทย์','คณะแพทยศาสตร์':'แพทย์','คณะแพทย์':'แพทย์','แพทย์ศาสตร์':'แพทย์','เเพื':'แพทย์','แพทย์ /':'แพทย์',
+  // เภสัช
+  'เภสัชศาสตร์':'เภสัช','เภสัชกร':'เภสัช','เภสัชกรรม':'เภสัช',
+  // ทันตะ
+  'ทันตแพทยศาสตร์':'ทันตะ','ทันตแพทย์':'ทันตะ','ทันตะะ':'ทันตะ',
+  // วิศวะ
+  'วิศวกรรมศาสตร์':'วิศวะ','วิศวกรรม':'วิศวะ',
+  // สถาปัตย์
+  'สถาปัตยกรรมศาสตร์':'สถาปัตย์','สถาปัตยกรรม':'สถาปัตย์','ถาปัต':'สถาปัตย์',
+  // สัตวแพทย์
+  'สัตวแพทยศาสตร์':'สัตวแพทย์','คณะสัตวแพทย์':'สัตวแพทย์','คณะสัตวแพทย์ศาสตร์':'สัตวแพทย์',
+  // พยาบาล
+  'พยาบาลศาสตร์':'พยาบาล',
+  // นิติ
+  'นิติศาสตร์':'นิติ',
+  // เศรษฐศาสตร์
+  'เศรษศาสตร์':'เศรษฐศาสตร์',
+  // สาธารณสุข
+  'สาธารณสุขศาสตร์':'สาธารณสุข','สาธารณะสุข':'สาธารณสุข',
+  // นิเทศ
+  'นิเทศศาสตร์':'นิเทศ',
+  // บัญชี / บริหาร
+  'บริหารธุรกิจ':'บริหาร','การบัญชี':'บัญชี',
+};
+const JUNK=new Set(['-','ไม่มี','ไม่ระบุ','อื่นๆ','n/a','none','ไม่','คณะ','na']);
+
+function isFormsFormat(cols){
+  return FORMS_SIGS.some(sig=>cols.some(c=>c.includes(sig)));
+}
+function normalizeDekStr(raw){
+  if(!raw)return'Unknown';
+  // "Dek 69+1" → "dek69+1" , "dek 70" → "dek70"
+  return raw.trim().toLowerCase().replace(/\s+/g,'');
+}
+function stripEmoji(s){
+  return s.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\uFE0F\u200D\u20E3]/gu,'').trim();
+}
+function normFac(raw){
+  const t=stripEmoji(raw).replace(/\s+/g,' ').trim();
+  return FAC_CANONICAL[t]||t;
+}
+function splitFacultyField(raw){
+  if(!raw||raw.trim()==='-')return[];
+  // Replace Thai connectors with comma
+  let s=raw.replace(/\s+กับ\s+/g,',').replace(/\s+หรือ\s+/g,',').replace(/\//g,',');
+  const segs=s.split(',').map(x=>x.trim()).filter(x=>x.length>1);
+  const out=[];
+  segs.forEach(seg=>{
+    if(!seg.includes(' ')){out.push(seg);return;}
+    // Space-separated: split further only if every token is ≤ 14 chars (short Thai word)
+    const toks=seg.split(/\s+/).filter(t=>t.length>1);
+    const maxLen=Math.max(...toks.map(t=>stripEmoji(t).length));
+    if(maxLen<=14&&toks.length>1){out.push(...toks);}
+    else{out.push(seg);}
+  });
+  return out.map(normFac).filter(f=>{
+    const c=stripEmoji(f).trim();
+    return c.length>1&&!JUNK.has(c)&&!JUNK.has(c.replace(/[ๆ.]/g,'').trim());
+  });
+}
+function transformFormsData(rawRows,cols){
+  const dekCol=cols.find(c=>c.includes('เป็น dek')||c.includes('เป็นdek'));
+  const facCol=cols.find(c=>c.includes('อยากเข้าคณะ')||c.includes('คณะ'));
+  if(!dekCol||!facCol)return null;
+  const counts={};
+  rawRows.forEach(row=>{
+    const dek=normalizeDekStr(row[dekCol]);
+    splitFacultyField(row[facCol]).forEach(fac=>{
+      const k=dek+'|||'+fac;counts[k]=(counts[k]||0)+1;
+    });
+  });
+  return Object.entries(counts).map(([k,n])=>{
+    const i=k.indexOf('|||');
+    return{dek:k.slice(0,i),university:'',faculty:k.slice(i+3),program:'',count:String(n)};
+  });
+}
+function detectAndApplyForms(rawRows,cols,alrtEl){
+  if(!isFormsFormat(cols))return false;
+  const tr=transformFormsData(rawRows,cols);
+  if(!tr||!tr.length)return false;
+  state.rawData=tr;
+  state.columns=['dek','university','faculty','program','count'];
+  state.mapping={dek:'dek',faculty:'faculty',program:null,university:null,count:'count'};
+  const dekN=new Set(tr.map(r=>r.dek)).size;
+  const facN=new Set(tr.map(r=>r.faculty)).size;
+  const total=rawRows.length;
+  const votes=tr.reduce((s,r)=>s+Number(r.count),0);
+  showAlert(alrtEl,`📋 <strong>Google Forms detected!</strong> ${total} responses · ${votes} faculty-votes · ${dekN} dek groups · ${facN} unique faculties — mapped automatically!`,'success');
+  applyMapping(true);
+  return true;
+}
+
 /* ── TABS ── */
 function switchTab(name){
   const names=['sheets','manual','sample'];
@@ -469,9 +571,11 @@ async function loadFromSheets(){
       if(text.trimStart().startsWith('<'))throw new Error('Got HTML — publish as CSV.');
       const parsed=Papa.parse(text,{header:true,skipEmptyLines:true});
       if(!parsed.data.length){showAlert(alrt,'Sheet appears empty.','error');return;}
-      state.rawData=parsed.data;state.columns=parsed.meta.fields||[];
-      showAlert(alrt,`✅ Loaded ${parsed.data.length} rows · ${state.columns.length} columns.`,'success');
-      showColumnMapper();
+      if(!detectAndApplyForms(parsed.data,parsed.meta.fields||[],alrt)){
+        state.rawData=parsed.data;state.columns=parsed.meta.fields||[];
+        showAlert(alrt,`✅ Loaded ${parsed.data.length} rows · ${state.columns.length} columns.`,'success');
+        showColumnMapper();
+      }
     }catch(e){showAlert(alrt,`Error: ${e.message}`,'error');}
     return;
   }
@@ -492,9 +596,12 @@ async function loadFromSheets(){
       if(text.trimStart().startsWith('<')){lastErr='Got HTML instead of CSV.';continue;}
       const parsed=Papa.parse(text,{header:true,skipEmptyLines:true});
       if(!parsed.data.length){showAlert(alrt,'Sheet appears empty.','error');return;}
-      state.rawData=parsed.data;state.columns=parsed.meta.fields||[];
-      showAlert(alrt,`✅ Loaded ${parsed.data.length} rows · ${state.columns.length} columns.`,'success');
-      showColumnMapper();return;
+      if(!detectAndApplyForms(parsed.data,parsed.meta.fields||[],alrt)){
+        state.rawData=parsed.data;state.columns=parsed.meta.fields||[];
+        showAlert(alrt,`✅ Loaded ${parsed.data.length} rows · ${state.columns.length} columns.`,'success');
+        showColumnMapper();
+      }
+      return;
     }catch(e){lastErr=e.message;}
   }
   showAlert(alrt,`<strong>Could not load.</strong> ${lastErr}<br>Try <em>File → Share → Publish to web → CSV</em> and paste that link.`,'error');
@@ -527,8 +634,17 @@ function importCSV(input){
   const file=input.files[0];if(!file)return;
   Papa.parse(file,{header:true,skipEmptyLines:true,complete:res=>{
     if(!res.data.length){alert('CSV is empty.');return;}
+    const cols=res.meta.fields||[];
+    // Auto-detect Google Forms format
+    const alrtEl=document.getElementById('manual-alert');
+    if(detectAndApplyForms(res.data,cols,alrtEl)){
+      // Scroll to chart
+      setTimeout(()=>document.getElementById('chart-panel').scrollIntoView({behavior:'smooth',block:'start'}),300);
+      return;
+    }
+    // Normal CSV import into manual table
     document.getElementById('manual-tbody').innerHTML='';
-    const f=res.meta.fields;
+    const f=cols;
     res.data.forEach(row=>addManualRow({dek:row[f[0]]||'',university:row[f[1]]||'',faculty:row[f[2]]||'',program:row[f[3]]||'',count:row[f[4]]||'1'}));
     switchTab('manual');
   }});
