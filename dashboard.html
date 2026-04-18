@@ -706,6 +706,7 @@ const FAC_CANONICAL={
   'engineering':'วิศวะ','engineer':'วิศวะ','eng':'วิศวะ', // English
   // ─── สถาปัตย์ ───
   'สถาปัตยกรรมศาสตร์':'สถาปัตย์','สถาปัตยกรรม':'สถาปัตย์','ถาปัต':'สถาปัตย์',
+  'สถาปัต':'สถาปัตย์','สถาปัด':'สถาปัตย์', // truncated / typo
   // ─── พยาบาล ── extra typos ───
   'พยาบาน':'พยาบาล','พยาบาลศาสตร':'พยาบาล', // missing ์ or ล
   // English
@@ -731,7 +732,7 @@ const FAC_CANONICAL={
   // ─── เทคนิคการแพทย์ ───
   'เทคนิคการเเพทย์':'เทคนิคการแพทย์','เทคนิคแพทย์':'เทคนิคการแพทย์',
   'เทคนิคการแพทย์ค้าบ':'เทคนิคการแพทย์','เทคนิคการแพทย์คับ':'เทคนิคการแพทย์',
-  'เทคนิคการแพท':'เทคนิคการแพทย์','เทค':'เทคนิคการแพทย์',
+  'เทคนิคการแพท':'เทคนิคการแพทย์','เทคนิค':'เทคนิคการแพทย์',
   'เมดเทค':'เทคนิคการแพทย์','med tech':'เทคนิคการแพทย์','medtech':'เทคนิคการแพทย์',
   // ─── นิติ ───
   'นิติศาสตร์':'นิติ','นิติศาสตร์บัณฑิต':'นิติ',
@@ -767,6 +768,14 @@ const FAC_CANONICAL={
   // ─── รัฐศาสตร์ ───
   'รัฐประศาสนศาสตร์':'รัฐศาสตร์','การเมือง':'รัฐศาสตร์',
   'รัฐสาตร์':'รัฐศาสตร์','รัฐศาตร์':'รัฐศาสตร์','รัฐสาสตร์':'รัฐศาสตร์',
+  // ─── สังคมสงเคราะห์ ───
+  'สังคมสงเคราะห์':'สังคมสงเคราะห์','สังคมสเกราะห์':'สังคมสงเคราะห์',
+  'สังคมสงเคาระห์':'สังคมสงเคราะห์','สังคมฯ':'สังคมสงเคราะห์',
+  // ─── แพทย์แผนไทย / การแพทย์แผนไทย ───
+  'การแพทย์แผนไทย':'แพทย์แผนไทย','การแพทย์แผนโบราณ':'แพทย์แผนไทย',
+  // ─── เวชกิจฉุกเฉิน typos ───
+  'อุกเฉินการแพท':'เวชกิจฉุกเฉิน','อุกเฉินการแพทย์':'เวชกิจฉุกเฉิน',
+  'อุกเฉิน':'เวชกิจฉุกเฉิน','ฉุกเฉิน':'เวชกิจฉุกเฉิน',
 };
 
 /* ── SUBTYPE → PARENT MAP ──────────────────────────
@@ -793,12 +802,17 @@ const FAC_PARENT = {
   // สัตวะ subtypes
   'สัตวะทหาร':    'สัตวะ',
 };
+// Faculties where ANY "XY" starting with X auto-becomes a subtype of X
+// e.g. "วิศวะคอมพิวเตอร์" → parent วิศวะ, "แพทย์แผนจีน" → parent แพทย์
+const AUTO_PARENTS=['วิศวะ','แพทย์','ทันตะ','เภสัช','พยาบาล','สัตวะ','สถาปัตย์','ครุ','เทคนิคการแพทย์','รังสีเทคนิค','สาธารณสุข'];
 const JUNK=new Set(['-','ไม่มี','ไม่ระบุ','อื่นๆ','n/a','none','ไม่','คณะ','na',
   'ลังเล','ระหว่าง','ติวเตอร์','อันดับ','เป็น','ค่า','หนู','ผม','ฉัน','เรา',
   'จุนา','บบน','ค่าบบน','ยัง','แต่','เพราะ','ตอน','และ','กับ','หรือ',
   'ไม่กี่','ก็','คับ','ครับ','ค่ะ','นะ','นะคะ','นะครับ',
-  'มศว','มช','มก','มธ','มม',   // university abbreviations, not faculties
-  'แพ',                          // too ambiguous (2 chars)
+  'มศว','มช','มก','มธ','มม','มจพ','มทส',   // university abbreviations
+  'แพ','วิท','นวัต','นิจุ','แงะ','แงะ',    // too short / too ambiguous
+  'อีกหลายคณะมักๆ','อีกหลายคณะ',           // "many other faculties"
+  'คอม','คอมพิวเตอร์',                      // too vague without context — use ✏️ editor
 ]);
 // Thai sentence-particle suffixes — a faculty name never ends with these
 const SENTENCE_ENDINGS=/คับ$|ครับ$|ค่ะ$|นะ$|นะคะ$|นะครับ$|จ้า$|จ๊ะ$|เลย$/;
@@ -834,7 +848,7 @@ function normFac(raw){
   // Strip trailing Thai laughter / keyboard mash: 555, !!!!, ????, ~~~~, ...
   t=t.replace(/[5!?~.\s]+$/, '').trim();
   // Strip trailing polite particles & keyboard-mash variants (คับบบ, ครับบ, ค่าาา, etc.)
-  t=t.replace(/\s*(ครับ+|ค่ะ+|ครัฟ+|ค้าบ+|คับบ*|ค่า+|ค่าบ+|จ้า+|นะ+|นะคะ|นะครับ|เลย|ด้วย|มากๆ|มาก)$/,'').trim();
+  t=t.replace(/\s*(ครับ+|ค่ะ+|ครัฟ+|ค้าบ+|ค้า+|คับบ*|ค่า+|ค่าบ+|จ้า+|นะ+|นะคะ|นะครับ|เลย|ด้วย|มากๆ|มาก|ค่จริง|จริงๆ|จริง)$/,'').trim();
   return FAC_CANONICAL[t]||t;
 }
 function splitFacultyField(raw){
@@ -1076,7 +1090,13 @@ function getProcessed(){
     return true;
   }).map(row=>{
     const subfaculty=normFac(cleanThai(row[m.faculty]||'Unknown'));
-    const faculty=FAC_PARENT[subfaculty]||subfaculty; // parent group (or same if no parent)
+    let faculty=FAC_PARENT[subfaculty]||subfaculty;
+    // Auto-prefix: "วิศวะคอมพิวเตอร์", "แพทย์ทหาร" etc. → auto-parent if starts with known faculty
+    if(faculty===subfaculty){
+      for(const p of AUTO_PARENTS){
+        if(subfaculty.startsWith(p)&&subfaculty.length>p.length){faculty=p;break;}
+      }
+    }
     return{
       dek:cleanThai(row[m.dek]||'Unknown'),
       faculty,
