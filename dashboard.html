@@ -809,8 +809,8 @@ function normFac(raw){
   t=t.replace(/^(อยากเข้าคณะ|อยากเข้า|อยากเรียนคณะ|อยากเรียน|ต้องการเข้าคณะ|ต้องการเข้า|คิดว่าจะเข้าคณะ|สนใจคณะ|สนใจ)\s*/,'');
   // Strip leading คณะ/สาขา prefix
   t=t.replace(/^(คณะ|สาขาวิชา|สาขา|ภาควิชา)\s*/,'');
-  // Strip trailing polite particles & filler
-  t=t.replace(/\s*(ครับ|ค่ะ|ครัฟ|ค้าบ|คับ|ค่า|ค่าบ|จ้า|จ้าา|นะ|นะคะ|นะครับ|เลย|ด้วย|มากๆ|มาก)$/,'').trim();
+  // Strip trailing polite particles & keyboard-mash variants (คับบบ, ครับบ, ค่าาา, etc.)
+  t=t.replace(/\s*(ครับ+|ค่ะ+|ครัฟ+|ค้าบ+|คับบ*|ค่า+|ค่าบ+|จ้า+|นะ+|นะคะ|นะครับ|เลย|ด้วย|มากๆ|มาก)$/,'').trim();
   return FAC_CANONICAL[t]||t;
 }
 function splitFacultyField(raw){
