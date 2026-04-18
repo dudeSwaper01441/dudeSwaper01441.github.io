@@ -624,9 +624,11 @@ const FAC_CANONICAL={
   'วิศวกรรมศาสตร์':'วิศวะ','วิศวกรรม':'วิศวะ','วิศวกรรมชีวการแพทย์':'วิศวะ',
   // ─── สถาปัตย์ ───
   'สถาปัตยกรรมศาสตร์':'สถาปัตย์','สถาปัตยกรรม':'สถาปัตย์','ถาปัต':'สถาปัตย์',
-  // ─── สัตวะ (user canonical) ───
+  // ─── สัตวะ (user canonical) — both ว and ว์ spellings ───
   'สัตวแพทยศาสตร์':'สัตวะ','สัตวแพทย์':'สัตวะ',
-  'คณะสัตวแพทย์':'สัตวะ','คณะสัตวแพทย์ศาสตร์':'สัตวะ','สัตว์แพทย์':'สัตวะ',
+  'สัตว์แพทยศาสตร์':'สัตวะ','สัตว์แพทย์':'สัตวะ',
+  'คณะสัตวแพทย์':'สัตวะ','คณะสัตวแพทย์ศาสตร์':'สัตวะ',
+  'คณะสัตว์แพทย์':'สัตวะ','คณะสัตว์แพทยศาสตร์':'สัตวะ',
   // ─── พยาบาล ───
   'พยาบาลศาสตร์':'พยาบาล','คณะพยาบาล':'พยาบาล',
   'พยาบาลตำรวจ':'พยาบาล','พยาบาลวิชาชีพ':'พยาบาล',
@@ -671,29 +673,43 @@ function normalizeDekStr(raw){
 function stripEmoji(s){
   return s.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\uFE0F\u200D\u20E3]/gu,'').trim();
 }
+// Central Thai text cleaner — applied everywhere before lookup
+function cleanThai(s){
+  return s
+    .normalize('NFC')                                          // unify Unicode forms
+    .replace(/[\u00A0\u200B\u200C\u200D\u2060\uFEFF]/g,'')   // strip invisible chars
+    .replace(/\u0E40\u0E40/g,'\u0E41')                        // เเ → แ (double-lae)
+    .replace(/\s+/g,' ')
+    .trim();
+}
 function normFac(raw){
-  let t=stripEmoji(raw)
-    .replace(/เเ/g,'แ')           // fix double-เ → แ (เเพทย์ → แพทย์)
-    .replace(/\s+/g,' ').trim();
-  // Strip leading คณะ/วิชา prefix (คณะแพทย์ → แพทย์)
+  let t=cleanThai(stripEmoji(raw));
+  // Strip leading คณะ/สาขา prefix
   t=t.replace(/^(คณะ|สาขาวิชา|สาขา|ภาควิชา)\s*/,'');
-  // Try exact canonical lookup; otherwise return normalized text
   return FAC_CANONICAL[t]||t;
 }
 function splitFacultyField(raw){
   if(!raw||raw.trim()==='-')return[];
-  // Replace Thai connectors with comma
-  let s=raw.replace(/\s+กับ\s+/g,',').replace(/\s+หรือ\s+/g,',').replace(/\//g,',');
+  // Replace connectors with comma (with and without surrounding spaces)
+  let s=raw
+    .replace(/\s*กับ\s*/g,',')
+    .replace(/\s*หรือ\s*/g,',')
+    .replace(/\//g,',');
   const segs=s.split(',').map(x=>x.trim()).filter(x=>x.length>1);
   const out=[];
   segs.forEach(seg=>{
     if(!seg.includes(' ')){out.push(seg);return;}
     const toks=seg.split(/\s+/).filter(t=>t.length>1);
     if(toks.length<2){out.push(seg);return;}
-    // Majority rule: split if MORE THAN HALF the tokens are ≤ 12 chars
-    // (handles "กายภาพบำบัด อักษร ความสัมพันธ์ระหว่างประเทศ" correctly)
-    const shortCount=toks.filter(t=>stripEmoji(t).length<=12).length;
-    if(shortCount>toks.length/2){out.push(...toks);}
+    // Multi-คณะ strings: "คณะแพทยศาสตร์ คณะบัญชี ..." — split always
+    if((seg.match(/คณะ/g)||[]).length>=2){out.push(...toks);return;}
+    // Adaptive threshold:
+    //   2 tokens  → split only if BOTH are ≤ 16 chars
+    //   3+ tokens → split if ≥ 50% are ≤ 16 chars
+    const lens=toks.map(t=>stripEmoji(t).length);
+    const shortCount=lens.filter(l=>l<=16).length;
+    const threshold=toks.length===2?toks.length:toks.length/2;
+    if(shortCount>=threshold){out.push(...toks);}
     else{out.push(seg);}
   });
   return out.map(normFac).filter(f=>{
@@ -708,7 +724,7 @@ function transformFormsData(rawRows,cols){
   const counts={};
   rawRows.forEach(row=>{
     const dek=normalizeDekStr(row[dekCol]);
-    splitFacultyField(row[facCol]).forEach(fac=>{
+    splitFacultyField(cleanThai(row[facCol]||'')).forEach(fac=>{
       const k=dek+'|||'+fac;counts[k]=(counts[k]||0)+1;
     });
   });
@@ -895,16 +911,21 @@ function getProcessed(){
     if(state.filters.university!=='all'&&m.university)return row[m.university]===state.filters.university;
     return true;
   }).map(row=>({
-    dek:(row[m.dek]||'Unknown').trim().replace(/เเ/g,'แ'),
-    // Re-apply normFac to catch any duplicates that slipped through the initial transform
-    faculty:normFac((row[m.faculty]||'Unknown').trim()),
+    dek:cleanThai(row[m.dek]||'Unknown'),
+    // Re-apply normFac + cleanThai to catch any Unicode duplicates that slipped through
+    faculty:normFac(cleanThai(row[m.faculty]||'Unknown')),
     program:m.program?(row[m.program]||'').trim():'',
     university:m.university?(row[m.university]||'').trim():'',
     count:rowCount(row),
   }));
 }
 function aggregate(data,key){
-  const map={};data.forEach(r=>{map[r[key]]=(map[r[key]]||0)+r.count;});
+  const map={};
+  data.forEach(r=>{
+    // Normalize key one final time to ensure Unicode variants merge correctly
+    const k=cleanThai(r[key]||'Unknown');
+    map[k]=(map[k]||0)+r.count;
+  });
   return Object.entries(map).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
 }
 
