@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Program Finder — TCAS</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('pre-dark')</script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f0f2f5;
+      --card:     #ffffff;
+      --text:     #1a1a2e;
+      --text-sub: #666;
+      --border:   #e0e0e0;
+      --tab-bg:   #f0f2f5;
+      --chip-bg:  #e8eaf6;
+      --shadow:   rgba(0,0,0,0.07);
+      --nav-bg:   rgba(255,255,255,0.95);
+      --accent:   #7b1fa2;
+    }
+    html.pre-dark body, body.dark {
+      --bg:       #0f1117;
+      --card:     #1a1d27;
+      --text:     #e8eaf6;
+      --text-sub: #9fa8da;
+      --border:   #2e3250;
+      --tab-bg:   #12151f;
+      --chip-bg:  #1e2240;
+      --shadow:   rgba(0,0,0,0.4);
+      --nav-bg:   rgba(26,29,39,0.97);
+    }
+
+    body { font-family:'Sarabun',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; transition:background .3s,color .3s; padding-top:60px; }
+
+    /* ── NAVBAR ── */
+    .navbar { position:fixed; top:0; left:0; right:0; z-index:200; background:var(--nav-bg); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); box-shadow:0 1px 8px var(--shadow); }
+    .nav-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:12px; }
+    .nav-brand { font-size:1.05rem; font-weight:800; color:#1a237e; text-decoration:none; display:flex; align-items:center; gap:7px; white-space:nowrap; }
+    body.dark .nav-brand { color:#9fa8da; }
+    .nav-brand span { opacity:.7; font-weight:500; font-size:0.88rem; }
+    .nav-links { display:flex; gap:2px; margin-left:auto; }
+    .nav-link { padding:7px 15px; border-radius:8px; color:var(--text-sub); text-decoration:none; font-size:0.9rem; font-weight:500; transition:all .18s; }
+    .nav-link:hover { background:var(--chip-bg); color:#3949ab; }
+    .nav-link.active { background:var(--chip-bg); color:var(--accent); font-weight:700; }
+    body.dark .nav-link.active { color:#ce93d8; }
+    .nav-icon-btn { width:36px; height:36px; border:none; border-radius:8px; background:var(--tab-bg); cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; transition:background .2s; color:var(--text); flex-shrink:0; }
+    .nav-icon-btn:hover { background:var(--chip-bg); }
+    .nav-hamburger { display:none; margin-left:4px; }
+    @media(max-width:600px){
+      .nav-links { display:none; position:fixed; top:60px; left:0; right:0; background:var(--card); flex-direction:column; padding:8px 16px 16px; border-bottom:1px solid var(--border); box-shadow:0 4px 16px var(--shadow); }
+      .nav-links.open { display:flex; }
+      .nav-hamburger { display:flex; }
+    }
+
+    /* ── PAGE HEADER ── */
+    .page-header { background:linear-gradient(135deg,#4a148c 0%,#6a1b9a 50%,#7b1fa2 100%); color:white; padding:32px 32px 28px; box-shadow:0 4px 12px rgba(0,0,0,0.2); }
+    .page-header h1 { font-size:1.75rem; font-weight:800; }
+    .page-header p { font-size:0.95rem; opacity:.8; margin-top:6px; line-height:1.5; }
+
+    .container { max-width:1200px; margin:0 auto; padding:24px 20px; }
+
+    /* ── CARD ── */
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 14px var(--shadow); padding:24px; margin-bottom:20px; }
+    .card-title { font-size:1rem; font-weight:700; color:var(--accent); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+    body.dark .card-title { color:#ce93d8; }
+    .section-label { font-size:0.78rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:12px; display:block; }
+
+    /* ── INTEREST TAGS ── */
+    .tags-grid { display:flex; flex-wrap:wrap; gap:10px; }
+    .interest-tag {
+      padding:10px 18px; border-radius:24px; cursor:pointer;
+      font-family:'Sarabun',sans-serif; font-size:0.9rem; font-weight:600;
+      border:2px solid var(--border); background:var(--tab-bg); color:var(--text-sub);
+      transition:all .2s; display:flex; align-items:center; gap:6px; user-select:none;
+    }
+    .interest-tag:hover { border-color:#ab47bc; color:#ab47bc; background:rgba(171,71,188,.07); }
+    .interest-tag.selected { background:#7b1fa2; border-color:#7b1fa2; color:#fff; box-shadow:0 3px 10px rgba(123,31,162,.3); }
+
+    /* ── PREFERENCE SELECTORS ── */
+    .prefs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+    .pref-item label { font-size:0.8rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.4px; display:block; margin-bottom:6px; }
+    select, input[type="number"] {
+      width:100%; padding:10px 14px; border:1.5px solid var(--border); border-radius:9px;
+      font-family:'Sarabun',sans-serif; font-size:0.9rem; outline:none;
+      background:var(--tab-bg); color:var(--text); transition:border-color .2s;
+    }
+    select:focus, input:focus { border-color:#7b1fa2; background:var(--card); }
+
+    /* ── BUTTONS ── */
+    .btn { padding:11px 24px; border:none; border-radius:9px; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:0.95rem; font-weight:700; transition:all .18s; display:inline-flex; align-items:center; gap:8px; }
+    .btn-find { background:linear-gradient(135deg,#6a1b9a,#7b1fa2); color:#fff; box-shadow:0 4px 14px rgba(123,31,162,.35); }
+    .btn-find:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(123,31,162,.4); }
+    .btn-reset { background:var(--tab-bg); color:var(--text-sub); }
+    .btn-reset:hover { background:var(--chip-bg); }
+
+    /* ── RESULTS HEADER ── */
+    .results-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:18px; }
+    .results-count { font-size:0.9rem; color:var(--text-sub); }
+    .results-count strong { color:var(--text); font-size:1.1rem; }
+
+    /* ── SORT TABS ── */
+    .sort-tabs { display:flex; gap:3px; background:var(--tab-bg); padding:3px; border-radius:8px; }
+    .sort-btn { padding:6px 14px; border:none; border-radius:6px; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:0.82rem; background:transparent; color:var(--text-sub); transition:all .18s; }
+    .sort-btn.active { background:var(--card); color:var(--accent); font-weight:700; box-shadow:0 1px 4px var(--shadow); }
+    body.dark .sort-btn.active { color:#ce93d8; }
+
+    /* ── PROGRAM CARDS ── */
+    .programs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+    .prog-card {
+      background:var(--card); border-radius:14px; padding:20px;
+      border:1.5px solid var(--border); transition:all .2s; cursor:default;
+      display:flex; flex-direction:column; gap:12px;
+    }
+    .prog-card:hover { border-color:#ab47bc; box-shadow:0 6px 24px rgba(123,31,162,.12); transform:translateY(-2px); }
+    .prog-card-header { display:flex; align-items:flex-start; gap:12px; }
+    .prog-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
+    .prog-info { flex:1; }
+    .prog-name { font-size:1rem; font-weight:700; line-height:1.3; margin-bottom:2px; }
+    .prog-faculty { font-size:0.82rem; color:var(--text-sub); }
+    .prog-uni { font-size:0.8rem; font-weight:600; color:var(--accent); margin-top:2px; }
+    body.dark .prog-uni { color:#ce93d8; }
+    .match-score-wrap { display:flex; align-items:center; gap:8px; }
+    .match-bar-bg { flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+    .match-bar { height:100%; border-radius:3px; background:linear-gradient(90deg,#7b1fa2,#ab47bc); transition:width .6s ease; }
+    .match-pct { font-size:0.78rem; font-weight:700; color:var(--accent); white-space:nowrap; }
+    body.dark .match-pct { color:#ce93d8; }
+    .career-tags { display:flex; flex-wrap:wrap; gap:5px; }
+    .career-tag { padding:3px 10px; background:var(--chip-bg); color:var(--text-sub); border-radius:12px; font-size:0.75rem; font-weight:600; }
+    .cat-badges { display:flex; flex-wrap:wrap; gap:5px; }
+    .cat-badge { padding:3px 10px; border-radius:12px; font-size:0.73rem; font-weight:700; }
+    .prog-footer { display:flex; align-items:center; justify-content:space-between; padding-top:10px; border-top:1px solid var(--border); }
+    .difficulty-wrap { display:flex; align-items:center; gap:6px; font-size:0.78rem; color:var(--text-sub); }
+    .difficulty-dots { display:flex; gap:3px; }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--border); }
+    .dot.filled { background:var(--accent); }
+    .popularity-wrap { font-size:0.78rem; color:var(--text-sub); display:flex; align-items:center; gap:4px; }
+    .pop-high { color:#2e7d32; font-weight:700; }
+    .pop-med  { color:#f57f17; font-weight:700; }
+    .pop-low  { color:#c62828; font-weight:700; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state { text-align:center; padding:64px 24px; color:var(--text-sub); }
+    .empty-state .icon { font-size:3.5rem; margin-bottom:14px; }
+    .empty-state p { font-size:1rem; }
+
+    /* ── INTEREST SCORE BANNER ── */
+    .no-selection-hint { background:linear-gradient(135deg,rgba(123,31,162,.08),rgba(171,71,188,.06)); border:1.5px dashed #ce93d8; border-radius:12px; padding:18px 22px; display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+    body:not(.dark) .no-selection-hint { border-color:#ab47bc; }
+    .no-selection-hint p { font-size:0.9rem; color:var(--text-sub); line-height:1.5; }
+
+    footer { text-align:center; padding:28px 16px; color:var(--text-sub); font-size:0.83rem; }
+    footer .heart { color:#e91e63; animation:hb 1.2s ease-in-out infinite; display:inline-block; }
+    @keyframes hb { 0%,100%{transform:scale(1);}50%{transform:scale(1.3);} }
+
+    @media(max-width:700px){
+      .page-header h1 { font-size:1.3rem; }
+      .container { padding:12px; }
+      .programs-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ NAVBAR ══ -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand">🎓 TCAS <span>Dashboard</span></a>
+    <div class="nav-links" id="nav-links">
+      <a href="index.html"     class="nav-link">Home</a>
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="compare.html"   class="nav-link">Compare</a>
+      <a href="finder.html"    class="nav-link active">Finder</a>
+    </div>
+    <button class="nav-icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    <button class="nav-icon-btn nav-hamburger" onclick="toggleMobileNav()">☰</button>
+  </div>
+</nav>
+
+<!-- ══ PAGE HEADER ══ -->
+<div class="page-header">
+  <h1>🔮 Program Finder</h1>
+  <p>Tell us what you're interested in — we'll match you with the right faculties and universities.<br>
+  <span style="font-size:0.82rem;opacity:.7;">ข้อมูลโปรแกรมมาจากฐานข้อมูลในตัว · คะแนน TCAS จริงต้องตรวจสอบที่ mytcas.com</span></p>
+</div>
+
+<div class="container">
+
+  <!-- ── STEP 1: INTERESTS ── -->
+  <div class="card">
+    <div class="card-title">① สิ่งที่คุณสนใจ <span style="font-weight:400;font-size:0.82rem;color:var(--text-sub);margin-left:4px;">— เลือกได้หลายอย่าง</span></div>
+    <div class="tags-grid" id="interest-tags">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+  <!-- ── STEP 2: PREFERENCES ── -->
+  <div class="card">
+    <div class="card-title">② ความต้องการเพิ่มเติม</div>
+    <div class="prefs-grid">
+      <div class="pref-item">
+        <label>มหาวิทยาลัย</label>
+        <select id="pref-uni">
+          <option value="all">ทุกมหาวิทยาลัย</option>
+          <option value="bangkok">กรุงเทพฯ และปริมณฑล</option>
+          <option value="north">ภาคเหนือ</option>
+          <option value="northeast">ภาคตะวันออกเฉียงเหนือ</option>
+          <option value="south">ภาคใต้</option>
+          <optgroup label="── เลือกเฉพาะมหาวิทยาลัย ──">
+            <option value="จุฬาลงกรณ์มหาวิทยาลัย">จุฬาลงกรณ์มหาวิทยาลัย</option>
+            <option value="มหาวิทยาลัยมหิดล">มหาวิทยาลัยมหิดล</option>
+            <option value="มหาวิทยาลัยธรรมศาสตร์">มหาวิทยาลัยธรรมศาสตร์</option>
+            <option value="มหาวิทยาลัยเกษตรศาสตร์">มหาวิทยาลัยเกษตรศาสตร์</option>
+            <option value="มหาวิทยาลัยเชียงใหม่">มหาวิทยาลัยเชียงใหม่</option>
+            <option value="มหาวิทยาลัยขอนแก่น">มหาวิทยาลัยขอนแก่น</option>
+            <option value="มหาวิทยาลัยสงขลานครินทร์">มหาวิทยาลัยสงขลานครินทร์</option>
+            <option value="สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง">KMITL</option>
+            <option value="มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าธนบุรี">KMUTT</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="pref-item">
+        <label>ระดับความยากในการสอบเข้า</label>
+        <select id="pref-diff">
+          <option value="all">ทุกระดับ</option>
+          <option value="1">ปานกลาง (⬤⬤○○○)</option>
+          <option value="2">สูง (⬤⬤⬤○○)</option>
+          <option value="3">สูงมาก (⬤⬤⬤⬤○)</option>
+          <option value="4">สูงที่สุด (⬤⬤⬤⬤⬤)</option>
+        </select>
+      </div>
+      <div class="pref-item">
+        <label>GPAX ประมาณ (ถ้ามี)</label>
+        <input type="number" id="pref-gpax" placeholder="เช่น 3.50" min="1" max="4" step="0.01">
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-find" onclick="runFinder()">🔮 ค้นหาโปรแกรมที่ใช่</button>
+      <button class="btn btn-reset" onclick="resetAll()">↩ รีเซ็ต</button>
+    </div>
+  </div>
+
+  <!-- ── RESULTS ── -->
+  <div id="results-section" style="display:none;">
+    <div class="results-header">
+      <div class="results-count">พบ <strong id="result-count">0</strong> โปรแกรมที่ตรงกับคุณ</div>
+      <div class="sort-tabs">
+        <button class="sort-btn active" onclick="setSort('match')"  data-sort="match">⭐ Best Match</button>
+        <button class="sort-btn"        onclick="setSort('diff')"   data-sort="diff">🎯 Difficulty</button>
+        <button class="sort-btn"        onclick="setSort('alpha')"  data-sort="alpha">A–Z</button>
+      </div>
+    </div>
+    <div class="programs-grid" id="programs-grid"></div>
+  </div>
+
+  <!-- ── INITIAL HINT ── -->
+  <div class="no-selection-hint" id="initial-hint">
+    <div style="font-size:2rem;">🔮</div>
+    <p>เลือกสิ่งที่คุณสนใจด้านบน แล้วกด <strong>"ค้นหาโปรแกรมที่ใช่"</strong><br>
+    เราจะแนะนำคณะและมหาวิทยาลัยที่เหมาะกับคุณจากฐานข้อมูล <strong>80+ โปรแกรม</strong> จาก 9 มหาวิทยาลัยชั้นนำ</p>
+  </div>
+
+</div>
+
+<footer>Made with <span class="heart">♥</span> by p'micmwit36</footer>
+
+<script>
+// ╔══════════════════════════════════════════════════════════╗
+// ║  INTEREST CATEGORIES                                     ║
+// ╚══════════════════════════════════════════════════════════╝
+const INTERESTS = [
+  { id:'tech',         label:'💻 เทคโนโลยีและคอมพิวเตอร์', color:'#1565c0' },
+  { id:'medical',      label:'⚕️ การแพทย์และสุขภาพ',        color:'#b71c1c' },
+  { id:'law',          label:'⚖️ กฎหมายและรัฐศาสตร์',       color:'#1b5e20' },
+  { id:'business',     label:'📊 ธุรกิจและเศรษฐศาสตร์',     color:'#e65100' },
+  { id:'science',      label:'🔬 วิทยาศาสตร์บริสุทธิ์',     color:'#004d40' },
+  { id:'arts',         label:'🎨 ศิลปะและการออกแบบ',        color:'#880e4f' },
+  { id:'media',        label:'📰 สื่อสารมวลชน',             color:'#4a148c' },
+  { id:'architecture', label:'🏗️ สถาปัตยกรรม',              color:'#bf360c' },
+  { id:'agriculture',  label:'🌱 เกษตรและสิ่งแวดล้อม',     color:'#33691e' },
+  { id:'humanities',   label:'🌏 ภาษาและมนุษยศาสตร์',      color:'#006064' },
+  { id:'education',    label:'👩‍🏫 ครุศาสตร์',                color:'#37474f' },
+  { id:'social',       label:'🤝 สังคมศาสตร์',              color:'#4527a0' },
+];
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  PROGRAM DATABASE                                        ║
+// ╚══════════════════════════════════════════════════════════╝
+// difficulty: 1=medium 2=high 3=very high 4=extremely high 5=hardest
+// location: bangkok | north | northeast | south
+const PROGRAMS = [
+  // ── ENGINEERING & TECH ──
+  { prog:'วิศวกรรมคอมพิวเตอร์', faculty:'วิศวกรรมศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['tech'], diff:4, gpax:3.5, loc:'bangkok', careers:['Software Engineer','AI/ML Engineer','Data Engineer','Cybersecurity Analyst'], pop:'high' },
+  { prog:'วิศวกรรมไฟฟ้า', faculty:'วิศวกรรมศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['tech','science'], diff:4, gpax:3.5, loc:'bangkok', careers:['Electrical Engineer','Embedded Systems','IoT Engineer'], pop:'high' },
+  { prog:'วิศวกรรมโยธา', faculty:'วิศวกรรมศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['tech','architecture'], diff:3, gpax:3.3, loc:'bangkok', careers:['Civil Engineer','Structural Engineer','Project Manager'], pop:'med' },
+  { prog:'วิศวกรรมเครื่องกล', faculty:'วิศวกรรมศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['tech','science'], diff:3, gpax:3.3, loc:'bangkok', careers:['Mechanical Engineer','Automotive Engineer','Manufacturing'], pop:'med' },
+  { prog:'วิศวกรรมคอมพิวเตอร์', faculty:'วิศวกรรมศาสตร์', uni:'มหาวิทยาลัยมหิดล', cats:['tech'], diff:3, gpax:3.3, loc:'bangkok', careers:['Software Developer','Systems Architect','Data Scientist'], pop:'high' },
+  { prog:'วิศวกรรมชีวการแพทย์', faculty:'วิศวกรรมศาสตร์', uni:'มหาวิทยาลัยมหิดล', cats:['tech','medical','science'], diff:3, gpax:3.3, loc:'bangkok', careers:['Biomedical Engineer','Medical Device Engineer','Research Scientist'], pop:'med' },
+  { prog:'วิศวกรรมคอมพิวเตอร์', faculty:'วิศวกรรมศาสตร์', uni:'มหาวิทยาลัยธรรมศาสตร์', cats:['tech'], diff:3, gpax:3.2, loc:'bangkok', careers:['Software Engineer','Full-Stack Developer','Cloud Engineer'], pop:'high' },
+  { prog:'วิศวกรรมคอมพิวเตอร์', faculty:'วิศวกรรมศาสตร์', uni:'มหาวิทยาลัยเกษตรศาสตร์', cats:['tech'], diff:3, gpax:3.0, loc:'bangkok', careers:['Software Developer','IT Engineer','Systems Analyst'], pop:'high' },
+  { prog:'วิศวกรรมซอฟต์แวร์', faculty:'วิศวกรรมศาสตร์', uni:'มหาวิทยาลัยเกษตรศาสตร์', cats:['tech'], diff:3, gpax:3.0, loc:'bangkok', careers:['Software Engineer','App Developer','DevOps Engineer'], pop:'high' },
+  { prog:'วิศวกรรมคอมพิวเตอร์', faculty:'วิศวกรรมศาสตร์', uni:'มหาวิทยาลัยเชียงใหม่', cats:['tech'], diff:3, gpax:3.0, loc:'north', careers:['Software Developer','IT Consultant'], pop:'high' },
+  { prog:'วิศวกรรมคอมพิวเตอร์', faculty:'วิศวกรรมศาสตร์', uni:'มหาวิทยาลัยขอนแก่น', cats:['tech'], diff:2, gpax:2.8, loc:'northeast', careers:['Software Developer','Web Developer'], pop:'med' },
+  { prog:'วิศวกรรมคอมพิวเตอร์', faculty:'วิศวกรรมศาสตร์', uni:'สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง', cats:['tech'], diff:3, gpax:3.0, loc:'bangkok', careers:['Software Engineer','Embedded Engineer','Game Developer'], pop:'high' },
+  { prog:'วิศวกรรมไฟฟ้า', faculty:'วิศวกรรมศาสตร์', uni:'สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง', cats:['tech','science'], diff:3, gpax:3.0, loc:'bangkok', careers:['Electrical Engineer','Power Engineer','Robotics Engineer'], pop:'med' },
+  { prog:'วิศวกรรมคอมพิวเตอร์', faculty:'วิศวกรรมศาสตร์', uni:'มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าธนบุรี', cats:['tech'], diff:3, gpax:3.0, loc:'bangkok', careers:['Software Engineer','AI Engineer','Research Engineer'], pop:'high' },
+  { prog:'วิทยาการคอมพิวเตอร์', faculty:'วิทยาศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['tech','science'], diff:3, gpax:3.3, loc:'bangkok', careers:['Data Scientist','ML Engineer','Software Architect'], pop:'high' },
+  { prog:'วิทยาการคอมพิวเตอร์', faculty:'วิทยาศาสตร์', uni:'มหาวิทยาลัยเกษตรศาสตร์', cats:['tech','science'], diff:2, gpax:2.8, loc:'bangkok', careers:['Data Analyst','Software Developer','IT Specialist'], pop:'high' },
+  { prog:'เทคโนโลยีสารสนเทศ', faculty:'ICT', uni:'มหาวิทยาลัยมหิดล', cats:['tech'], diff:3, gpax:3.0, loc:'bangkok', careers:['IT Manager','Systems Engineer','Cloud Architect','UX Designer'], pop:'high' },
+
+  // ── MEDICAL ──
+  { prog:'แพทยศาสตร์บัณฑิต', faculty:'แพทยศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['medical','science'], diff:5, gpax:3.8, loc:'bangkok', careers:['แพทย์ทั่วไป','แพทย์เฉพาะทาง','นักวิจัยทางการแพทย์'], pop:'high' },
+  { prog:'แพทยศาสตร์บัณฑิต', faculty:'แพทยศาสตร์ศิริราช', uni:'มหาวิทยาลัยมหิดล', cats:['medical','science'], diff:5, gpax:3.8, loc:'bangkok', careers:['แพทย์','แพทย์เฉพาะทาง','อาจารย์แพทย์'], pop:'high' },
+  { prog:'แพทยศาสตร์บัณฑิต', faculty:'แพทยศาสตร์โรงพยาบาลรามาธิบดี', uni:'มหาวิทยาลัยมหิดล', cats:['medical','science'], diff:5, gpax:3.8, loc:'bangkok', careers:['แพทย์','แพทย์วิจัย','อาจารย์แพทย์'], pop:'high' },
+  { prog:'แพทยศาสตร์บัณฑิต', faculty:'แพทยศาสตร์', uni:'มหาวิทยาลัยธรรมศาสตร์', cats:['medical','science'], diff:5, gpax:3.8, loc:'bangkok', careers:['แพทย์','แพทย์ชุมชน'], pop:'high' },
+  { prog:'แพทยศาสตร์บัณฑิต', faculty:'แพทยศาสตร์', uni:'มหาวิทยาลัยเชียงใหม่', cats:['medical','science'], diff:5, gpax:3.8, loc:'north', careers:['แพทย์','แพทย์ชุมชนภาคเหนือ'], pop:'high' },
+  { prog:'แพทยศาสตร์บัณฑิต', faculty:'แพทยศาสตร์', uni:'มหาวิทยาลัยขอนแก่น', cats:['medical','science'], diff:5, gpax:3.8, loc:'northeast', careers:['แพทย์','แพทย์ชุมชนภาคอีสาน'], pop:'high' },
+  { prog:'แพทยศาสตร์บัณฑิต', faculty:'แพทยศาสตร์', uni:'มหาวิทยาลัยสงขลานครินทร์', cats:['medical','science'], diff:5, gpax:3.8, loc:'south', careers:['แพทย์','แพทย์ชุมชนภาคใต้'], pop:'high' },
+  { prog:'ทันตแพทยศาสตร์บัณฑิต', faculty:'ทันตแพทยศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['medical','science'], diff:5, gpax:3.75, loc:'bangkok', careers:['ทันตแพทย์','ทันตแพทย์เฉพาะทาง'], pop:'high' },
+  { prog:'ทันตแพทยศาสตร์บัณฑิต', faculty:'ทันตแพทยศาสตร์', uni:'มหาวิทยาลัยมหิดล', cats:['medical','science'], diff:5, gpax:3.75, loc:'bangkok', careers:['ทันตแพทย์','อาจารย์ทันตแพทย์'], pop:'high' },
+  { prog:'เภสัชศาสตร์บัณฑิต', faculty:'เภสัชศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['medical','science'], diff:4, gpax:3.5, loc:'bangkok', careers:['เภสัชกร','นักวิจัยยา','เภสัชอุตสาหกรรม'], pop:'high' },
+  { prog:'เภสัชศาสตร์บัณฑิต', faculty:'เภสัชศาสตร์', uni:'มหาวิทยาลัยมหิดล', cats:['medical','science'], diff:4, gpax:3.5, loc:'bangkok', careers:['เภสัชกร','นักวิจัย','ที่ปรึกษาทางยา'], pop:'high' },
+  { prog:'พยาบาลศาสตร์บัณฑิต', faculty:'พยาบาลศาสตร์', uni:'มหาวิทยาลัยมหิดล', cats:['medical'], diff:3, gpax:3.0, loc:'bangkok', careers:['พยาบาลวิชาชีพ','พยาบาลผู้เชี่ยวชาญ','ผู้จัดการพยาบาล'], pop:'high' },
+  { prog:'สาธารณสุขศาสตร์บัณฑิต', faculty:'สาธารณสุขศาสตร์', uni:'มหาวิทยาลัยมหิดล', cats:['medical','science'], diff:3, gpax:3.0, loc:'bangkok', careers:['นักสาธารณสุข','ผู้เชี่ยวชาญด้านสุขภาพ'], pop:'med' },
+  { prog:'เทคนิคการแพทย์', faculty:'เทคนิคการแพทย์', uni:'มหาวิทยาลัยมหิดล', cats:['medical','science'], diff:3, gpax:3.0, loc:'bangkok', careers:['นักเทคนิคการแพทย์','นักวิทยาศาสตร์การแพทย์'], pop:'med' },
+  { prog:'กายภาพบำบัด', faculty:'กายภาพบำบัด', uni:'มหาวิทยาลัยมหิดล', cats:['medical'], diff:3, gpax:3.0, loc:'bangkok', careers:['นักกายภาพบำบัด','ผู้เชี่ยวชาญด้านการฟื้นฟู'], pop:'med' },
+
+  // ── LAW & POLITICS ──
+  { prog:'นิติศาสตร์บัณฑิต', faculty:'นิติศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['law'], diff:4, gpax:3.4, loc:'bangkok', careers:['ทนายความ','อัยการ','ผู้พิพากษา','ที่ปรึกษากฎหมาย'], pop:'high' },
+  { prog:'นิติศาสตร์บัณฑิต', faculty:'นิติศาสตร์', uni:'มหาวิทยาลัยธรรมศาสตร์', cats:['law'], diff:4, gpax:3.4, loc:'bangkok', careers:['ทนายความ','อัยการ','ผู้พิพากษา','นักกฎหมาย'], pop:'high' },
+  { prog:'นิติศาสตร์บัณฑิต', faculty:'นิติศาสตร์', uni:'มหาวิทยาลัยเชียงใหม่', cats:['law'], diff:3, gpax:3.0, loc:'north', careers:['ทนายความ','นักกฎหมาย'], pop:'med' },
+  { prog:'นิติศาสตร์บัณฑิต', faculty:'นิติศาสตร์', uni:'มหาวิทยาลัยขอนแก่น', cats:['law'], diff:3, gpax:3.0, loc:'northeast', careers:['ทนายความ','นักกฎหมาย'], pop:'med' },
+  { prog:'การปกครอง', faculty:'รัฐศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['law','social'], diff:4, gpax:3.4, loc:'bangkok', careers:['ข้าราชการ','นักการเมือง','นักวิเคราะห์นโยบาย'], pop:'high' },
+  { prog:'ความสัมพันธ์ระหว่างประเทศ', faculty:'รัฐศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['law','humanities','social'], diff:4, gpax:3.4, loc:'bangkok', careers:['นักการทูต','ที่ปรึกษากิจการต่างประเทศ','นักวิเคราะห์ระหว่างประเทศ'], pop:'high' },
+  { prog:'บริหารรัฐกิจ', faculty:'รัฐศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['law','social','business'], diff:3, gpax:3.2, loc:'bangkok', careers:['ข้าราชการ','นักบริหารภาครัฐ'], pop:'med' },
+  { prog:'การปกครอง', faculty:'รัฐศาสตร์', uni:'มหาวิทยาลัยธรรมศาสตร์', cats:['law','social'], diff:3, gpax:3.2, loc:'bangkok', careers:['ข้าราชการ','นักการเมือง','นักวิเคราะห์นโยบาย'], pop:'high' },
+
+  // ── BUSINESS & ECONOMICS ──
+  { prog:'เศรษฐศาสตร์บัณฑิต', faculty:'เศรษฐศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['business','science'], diff:3, gpax:3.2, loc:'bangkok', careers:['นักเศรษฐศาสตร์','นักวิเคราะห์การเงิน','ที่ปรึกษาธุรกิจ'], pop:'high' },
+  { prog:'เศรษฐศาสตร์บัณฑิต', faculty:'เศรษฐศาสตร์', uni:'มหาวิทยาลัยธรรมศาสตร์', cats:['business','science'], diff:3, gpax:3.2, loc:'bangkok', careers:['นักเศรษฐศาสตร์','นักวิเคราะห์นโยบาย','ธนาคาร'], pop:'high' },
+  { prog:'การบัญชี', faculty:'พาณิชยศาสตร์และการบัญชี', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['business'], diff:3, gpax:3.2, loc:'bangkok', careers:['นักบัญชี','ผู้ตรวจสอบบัญชี','CFO'], pop:'high' },
+  { prog:'บริหารธุรกิจ', faculty:'พาณิชยศาสตร์และการบัญชี', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['business'], diff:3, gpax:3.2, loc:'bangkok', careers:['ผู้จัดการ','ผู้บริหาร','Entrepreneur'], pop:'high' },
+  { prog:'การบัญชี', faculty:'พาณิชยศาสตร์และการบัญชี', uni:'มหาวิทยาลัยธรรมศาสตร์', cats:['business'], diff:3, gpax:3.0, loc:'bangkok', careers:['นักบัญชี','นักตรวจสอบ','CPA'], pop:'high' },
+  { prog:'บริหารธุรกิจ', faculty:'พาณิชยศาสตร์และการบัญชี', uni:'มหาวิทยาลัยธรรมศาสตร์', cats:['business'], diff:3, gpax:3.0, loc:'bangkok', careers:['ผู้จัดการ','นักวิเคราะห์ธุรกิจ','Startup Founder'], pop:'high' },
+  { prog:'การจัดการ', faculty:'บริหารธุรกิจ', uni:'มหาวิทยาลัยเกษตรศาสตร์', cats:['business'], diff:2, gpax:2.8, loc:'bangkok', careers:['ผู้จัดการ','HR Manager','Operations Manager'], pop:'med' },
+  { prog:'การตลาด', faculty:'บริหารธุรกิจ', uni:'มหาวิทยาลัยเกษตรศาสตร์', cats:['business','media'], diff:2, gpax:2.8, loc:'bangkok', careers:['นักการตลาด','Brand Manager','Digital Marketer'], pop:'med' },
+
+  // ── SCIENCE ──
+  { prog:'เทคโนโลยีชีวภาพ', faculty:'วิทยาศาสตร์', uni:'มหาวิทยาลัยมหิดล', cats:['science','medical'], diff:3, gpax:3.2, loc:'bangkok', careers:['นักวิทยาศาสตร์','นักวิจัยยา','Biotech Researcher'], pop:'med' },
+  { prog:'เคมี', faculty:'วิทยาศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['science'], diff:3, gpax:3.0, loc:'bangkok', careers:['นักเคมี','นักวิจัย','วิศวกรเคมี'], pop:'med' },
+  { prog:'ชีววิทยา', faculty:'วิทยาศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['science','medical'], diff:2, gpax:3.0, loc:'bangkok', careers:['นักชีววิทยา','นักวิจัย','ครู'], pop:'low' },
+  { prog:'คณิตศาสตร์', faculty:'วิทยาศาสตร์', uni:'มหาวิทยาลัยมหิดล', cats:['science','tech'], diff:3, gpax:3.0, loc:'bangkok', careers:['Actuary','Data Scientist','นักคณิตศาสตร์ประกันภัย'], pop:'med' },
+  { prog:'วิทยาการคอมพิวเตอร์', faculty:'วิทยาศาสตร์', uni:'มหาวิทยาลัยเชียงใหม่', cats:['tech','science'], diff:2, gpax:2.8, loc:'north', careers:['Software Developer','Data Analyst'], pop:'high' },
+  { prog:'สถิติ', faculty:'วิทยาศาสตร์', uni:'มหาวิทยาลัยเกษตรศาสตร์', cats:['science','business'], diff:2, gpax:2.8, loc:'bangkok', careers:['Data Analyst','Statistician','นักวิเคราะห์ข้อมูล'], pop:'med' },
+
+  // ── ARTS & DESIGN ──
+  { prog:'สถาปัตยกรรม', faculty:'สถาปัตยกรรมศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['architecture','arts'], diff:4, gpax:3.3, loc:'bangkok', careers:['สถาปนิก','นักออกแบบ','Urban Planner'], pop:'high' },
+  { prog:'การออกแบบอุตสาหกรรม', faculty:'สถาปัตยกรรมศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['architecture','arts','tech'], diff:3, gpax:3.0, loc:'bangkok', careers:['Product Designer','Industrial Designer','UX Designer'], pop:'med' },
+  { prog:'สถาปัตยกรรม', faculty:'สถาปัตยกรรมศาสตร์', uni:'สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง', cats:['architecture','arts'], diff:3, gpax:3.0, loc:'bangkok', careers:['สถาปนิก','นักออกแบบ'], pop:'med' },
+  { prog:'ออกแบบนิเทศศิลป์', faculty:'ศิลปกรรมศาสตร์', uni:'มหาวิทยาลัยธรรมศาสตร์', cats:['arts','media'], diff:3, gpax:3.0, loc:'bangkok', careers:['Graphic Designer','Creative Director','Art Director'], pop:'med' },
+
+  // ── MEDIA & COMMUNICATIONS ──
+  { prog:'วารสารศาสตร์', faculty:'นิเทศศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['media'], diff:3, gpax:3.2, loc:'bangkok', careers:['นักข่าว','Content Creator','PR Specialist'], pop:'med' },
+  { prog:'ภาพยนตร์และดิจิทัลมีเดีย', faculty:'นิเทศศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['media','arts'], diff:3, gpax:3.0, loc:'bangkok', careers:['ผู้กำกับ','Filmmaker','Content Producer'], pop:'med' },
+  { prog:'การโฆษณา', faculty:'นิเทศศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['media','business'], diff:3, gpax:3.0, loc:'bangkok', careers:['Creative Director','Account Manager','Digital Marketer'], pop:'med' },
+
+  // ── LANGUAGES & HUMANITIES ──
+  { prog:'ภาษาอังกฤษ', faculty:'อักษรศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['humanities'], diff:4, gpax:3.3, loc:'bangkok', careers:['ล่าม','แปลภาษา','ครูสอนภาษา','Content Writer'], pop:'high' },
+  { prog:'ภาษาญี่ปุ่น', faculty:'อักษรศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['humanities'], diff:3, gpax:3.2, loc:'bangkok', careers:['ล่ามญี่ปุ่น','นักแปล','ผู้ประสานงานบริษัทญี่ปุ่น'], pop:'med' },
+  { prog:'ภาษาจีน', faculty:'อักษรศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['humanities','business'], diff:3, gpax:3.2, loc:'bangkok', careers:['ล่ามจีน','นักแปล','ผู้ประสานงานธุรกิจจีน'], pop:'med' },
+  { prog:'ภาษาอังกฤษ', faculty:'มนุษยศาสตร์', uni:'มหาวิทยาลัยเชียงใหม่', cats:['humanities'], diff:2, gpax:2.8, loc:'north', careers:['ครูสอนภาษา','นักแปล','ล่าม'], pop:'med' },
+
+  // ── AGRICULTURE ──
+  { prog:'เกษตรศาสตร์', faculty:'เกษตร', uni:'มหาวิทยาลัยเกษตรศาสตร์', cats:['agriculture','science'], diff:2, gpax:2.5, loc:'bangkok', careers:['นักวิจัยการเกษตร','Agricultural Technologist','Farm Manager'], pop:'med' },
+  { prog:'สัตวแพทยศาสตร์', faculty:'สัตวแพทยศาสตร์', uni:'มหาวิทยาลัยเกษตรศาสตร์', cats:['medical','agriculture','science'], diff:4, gpax:3.5, loc:'bangkok', careers:['สัตวแพทย์','นักวิจัย','Animal Health Specialist'], pop:'med' },
+  { prog:'เศรษฐศาสตร์เกษตร', faculty:'เศรษฐศาสตร์', uni:'มหาวิทยาลัยเกษตรศาสตร์', cats:['agriculture','business'], diff:2, gpax:2.5, loc:'bangkok', careers:['นักเศรษฐศาสตร์เกษตร','ที่ปรึกษาการเกษตร'], pop:'low' },
+
+  // ── EDUCATION ──
+  { prog:'การศึกษาปฐมวัย', faculty:'ครุศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['education','social'], diff:3, gpax:3.0, loc:'bangkok', careers:['ครูปฐมวัย','นักพัฒนาหลักสูตร'], pop:'med' },
+  { prog:'คณิตศาสตร์', faculty:'ครุศาสตร์', uni:'จุฬาลงกรณ์มหาวิทยาลัย', cats:['education','science'], diff:3, gpax:3.0, loc:'bangkok', careers:['ครูคณิตศาสตร์','นักพัฒนาการศึกษา'], pop:'med' },
+
+  // ── SOCIAL SCIENCES ──
+  { prog:'สังคมสงเคราะห์ศาสตร์', faculty:'สังคมสงเคราะห์ศาสตร์', uni:'มหาวิทยาลัยธรรมศาสตร์', cats:['social'], diff:2, gpax:2.5, loc:'bangkok', careers:['นักสังคมสงเคราะห์','NGO Worker','Social Worker'], pop:'low' },
+  { prog:'สังคมวิทยาและมานุษยวิทยา', faculty:'สังคมศาสตร์', uni:'มหาวิทยาลัยเชียงใหม่', cats:['social','humanities'], diff:2, gpax:2.5, loc:'north', careers:['นักสังคมวิทยา','นักวิจัย','นักพัฒนาชุมชน'], pop:'low' },
+];
+
+// ── University → location mapping
+const UNI_LOCATION = {
+  'จุฬาลงกรณ์มหาวิทยาลัย':'bangkok',
+  'มหาวิทยาลัยมหิดล':'bangkok',
+  'มหาวิทยาลัยธรรมศาสตร์':'bangkok',
+  'มหาวิทยาลัยเกษตรศาสตร์':'bangkok',
+  'สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง':'bangkok',
+  'มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าธนบุรี':'bangkok',
+  'มหาวิทยาลัยเชียงใหม่':'north',
+  'มหาวิทยาลัยขอนแก่น':'northeast',
+  'มหาวิทยาลัยสงขลานครินทร์':'south',
+};
+
+// ── Category icon + gradient
+const CAT_STYLE = {
+  tech:         { icon:'💻', bg:'linear-gradient(135deg,#e3f2fd,#bbdefb)', color:'#1565c0' },
+  medical:      { icon:'⚕️', bg:'linear-gradient(135deg,#fce4ec,#f8bbd0)', color:'#b71c1c' },
+  law:          { icon:'⚖️', bg:'linear-gradient(135deg,#e8f5e9,#c8e6c9)', color:'#1b5e20' },
+  business:     { icon:'📊', bg:'linear-gradient(135deg,#fff3e0,#ffe0b2)', color:'#e65100' },
+  science:      { icon:'🔬', bg:'linear-gradient(135deg,#e0f2f1,#b2dfdb)', color:'#004d40' },
+  arts:         { icon:'🎨', bg:'linear-gradient(135deg,#fce4ec,#f48fb1)', color:'#880e4f' },
+  media:        { icon:'📰', bg:'linear-gradient(135deg,#ede7f6,#d1c4e9)', color:'#4a148c' },
+  architecture: { icon:'🏗️', bg:'linear-gradient(135deg,#fbe9e7,#ffccbc)', color:'#bf360c' },
+  agriculture:  { icon:'🌱', bg:'linear-gradient(135deg,#f1f8e9,#dcedc8)', color:'#33691e' },
+  humanities:   { icon:'🌏', bg:'linear-gradient(135deg,#e0f7fa,#b2ebf2)', color:'#006064' },
+  education:    { icon:'👩‍🏫', bg:'linear-gradient(135deg,#eceff1,#cfd8dc)', color:'#37474f' },
+  social:       { icon:'🤝', bg:'linear-gradient(135deg,#ede7f6,#b39ddb)', color:'#4527a0' },
+};
+
+// ── State
+let selectedInterests = new Set();
+let currentSort = 'match';
+let currentResults = [];
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  RENDER INTEREST TAGS                                    ║
+// ╚══════════════════════════════════════════════════════════╝
+function renderTags() {
+  document.getElementById('interest-tags').innerHTML = INTERESTS.map(i => `
+    <button class="interest-tag" id="tag-${i.id}" onclick="toggleInterest('${i.id}')">${i.label}</button>
+  `).join('');
+}
+
+function toggleInterest(id) {
+  if (selectedInterests.has(id)) selectedInterests.delete(id);
+  else selectedInterests.add(id);
+  document.getElementById(`tag-${id}`).classList.toggle('selected', selectedInterests.has(id));
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  FINDER LOGIC                                            ║
+// ╚══════════════════════════════════════════════════════════╝
+function runFinder() {
+  document.getElementById('initial-hint').style.display = 'none';
+
+  const prefUni  = document.getElementById('pref-uni').value;
+  const prefDiff = document.getElementById('pref-diff').value;
+  const prefGpax = parseFloat(document.getElementById('pref-gpax').value) || 0;
+
+  let results = PROGRAMS.map(p => {
+    // Match score based on selected interests
+    const matchCount = selectedInterests.size === 0
+      ? 1
+      : p.cats.filter(c => selectedInterests.has(c)).length;
+    const matchScore = selectedInterests.size === 0
+      ? 100
+      : Math.round((matchCount / Math.max(selectedInterests.size, p.cats.length)) * 100);
+
+    return { ...p, matchScore, matchCount };
+  });
+
+  // Filter: only show if at least 1 interest matches (or no interests selected)
+  if (selectedInterests.size > 0) {
+    results = results.filter(r => r.matchCount > 0);
+  }
+
+  // Filter: university / location
+  if (prefUni !== 'all') {
+    const locKeys = ['bangkok','north','northeast','south'];
+    if (locKeys.includes(prefUni)) {
+      results = results.filter(r => UNI_LOCATION[r.uni] === prefUni);
+    } else {
+      results = results.filter(r => r.uni === prefUni);
+    }
+  }
+
+  // Filter: difficulty
+  if (prefDiff !== 'all') {
+    const d = parseInt(prefDiff);
+    results = results.filter(r => r.diff >= d);
+  }
+
+  // Filter: GPAX (only exclude if user's GPAX is meaningfully below requirement)
+  if (prefGpax > 0) {
+    results = results.filter(r => prefGpax >= r.gpax - 0.5);
+  }
+
+  currentResults = results;
+  sortAndRender();
+}
+
+function setSort(s) {
+  currentSort = s;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === s));
+  sortAndRender();
+}
+
+function sortAndRender() {
+  let sorted = [...currentResults];
+  if (currentSort === 'match') sorted.sort((a,b) => b.matchScore - a.matchScore || b.diff - a.diff);
+  if (currentSort === 'diff')  sorted.sort((a,b) => b.diff - a.diff || b.matchScore - a.matchScore);
+  if (currentSort === 'alpha') sorted.sort((a,b) => a.prog.localeCompare(b.prog, 'th'));
+
+  document.getElementById('result-count').textContent = sorted.length;
+  document.getElementById('results-section').style.display = 'block';
+
+  if (sorted.length === 0) {
+    document.getElementById('programs-grid').innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="icon">🔍</div>
+        <p>ไม่พบโปรแกรมที่ตรงกับเงื่อนไขของคุณ<br>ลองเปลี่ยนตัวเลือกดูนะ</p>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('programs-grid').innerHTML = sorted.map(p => renderCard(p)).join('');
+  document.getElementById('results-section').scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function renderCard(p) {
+  const mainCat = p.cats[0];
+  const style   = CAT_STYLE[mainCat] || CAT_STYLE.tech;
+  const popLabel = p.pop === 'high' ? '<span class="pop-high">🔥 High Demand</span>'
+                 : p.pop === 'med'  ? '<span class="pop-med">📈 Medium</span>'
+                 : '<span class="pop-low">🌱 Niche</span>';
+
+  // Difficulty dots
+  const dots = Array.from({length:5},(_,i)=>`<div class="dot ${i < p.diff ? 'filled' : ''}"></div>`).join('');
+  const diffLabel = ['','ปานกลาง','สูง','สูงมาก','สูงมาก','สูงที่สุด'][p.diff];
+
+  // Match bar (min 15% so it's visible)
+  const barW = Math.max(p.matchScore, 15);
+
+  // Category badges (max 3)
+  const catBadges = p.cats.slice(0,3).map(c => {
+    const st = CAT_STYLE[c];
+    return `<span class="cat-badge" style="background:${st.bg.replace('linear-gradient(135deg,','').split(',')[0]};color:${st.color}">${st.icon} ${c}</span>`;
+  }).join('');
+
+  return `
+  <div class="prog-card">
+    <div class="prog-card-header">
+      <div class="prog-icon" style="background:${style.bg}">${style.icon}</div>
+      <div class="prog-info">
+        <div class="prog-name">${p.prog}</div>
+        <div class="prog-faculty">${p.faculty}</div>
+        <div class="prog-uni">${p.uni}</div>
+      </div>
+    </div>
+    <div class="match-score-wrap">
+      <div class="match-bar-bg"><div class="match-bar" style="width:${barW}%"></div></div>
+      <span class="match-pct">${p.matchScore}% match</span>
+    </div>
+    <div class="career-tags">${p.careers.map(c=>`<span class="career-tag">${c}</span>`).join('')}</div>
+    <div class="prog-footer">
+      <div class="difficulty-wrap">
+        <div class="difficulty-dots">${dots}</div>
+        <span>${diffLabel} · GPAX ~${p.gpax.toFixed(1)}+</span>
+      </div>
+      <div class="popularity-wrap">${popLabel}</div>
+    </div>
+  </div>`;
+}
+
+function resetAll() {
+  selectedInterests.clear();
+  document.querySelectorAll('.interest-tag').forEach(t => t.classList.remove('selected'));
+  document.getElementById('pref-uni').value = 'all';
+  document.getElementById('pref-diff').value = 'all';
+  document.getElementById('pref-gpax').value = '';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('initial-hint').style.display = 'flex';
+}
+
+/* ── THEME ── */
+function toggleTheme() {
+  const dark = !document.body.classList.contains('dark');
+  document.body.classList.toggle('dark', dark);
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+  document.getElementById('theme-btn').textContent = dark ? '☀️' : '🌙';
+}
+function toggleMobileNav() { document.getElementById('nav-links').classList.toggle('open'); }
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderTags();
+  if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark');
+    document.getElementById('theme-btn').textContent = '☀️';
+  }
+});
+</script>
+</body>
+</html>
