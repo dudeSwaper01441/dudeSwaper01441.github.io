@@ -612,30 +612,51 @@ const colA=(i,a=0.82)=>hex2rgba(col(i),a);
    ══════════════════════════════════════════════ */
 const FORMS_SIGS=['ประทับเวลา','เป็น dek','อยากเข้าคณะ'];
 const FAC_CANONICAL={
-  // แพทย์
-  'แพทยศาสตร์':'แพทย์','คณะแพทยศาสตร์':'แพทย์','คณะแพทย์':'แพทย์','แพทย์ศาสตร์':'แพทย์','เเพื':'แพทย์','แพทย์ /':'แพทย์',
-  // เภสัช
-  'เภสัชศาสตร์':'เภสัช','เภสัชกร':'เภสัช','เภสัชกรรม':'เภสัช',
-  // ทันตะ
-  'ทันตแพทยศาสตร์':'ทันตะ','ทันตแพทย์':'ทันตะ','ทันตะะ':'ทันตะ',
-  // วิศวะ
-  'วิศวกรรมศาสตร์':'วิศวะ','วิศวกรรม':'วิศวะ',
-  // สถาปัตย์
+  // ─── แพทย์ ───
+  'แพทยศาสตร์':'แพทย์','คณะแพทยศาสตร์':'แพทย์','คณะแพทย์':'แพทย์',
+  'แพทย์ศาสตร์':'แพทย์','เเพื':'แพทย์','แพทย์ /':'แพทย์','เเพทย์':'แพทย์',
+  'แพทย์ค่ะ':'แพทย์','แพทยศาสตร์บัณฑิต':'แพทย์',
+  // ─── เภสัช ───
+  'เภสัชศาสตร์':'เภสัช','เภสัชกร':'เภสัช','เภสัชกรรม':'เภสัช','เภสัชศาสตร์บัณฑิต':'เภสัช',
+  // ─── ทันตะ ───
+  'ทันตแพทยศาสตร์':'ทันตะ','ทันตแพทย์':'ทันตะ','ทันตะะ':'ทันตะ','ทันตแพทยศาสตร์บัณฑิต':'ทันตะ',
+  // ─── วิศวะ ───
+  'วิศวกรรมศาสตร์':'วิศวะ','วิศวกรรม':'วิศวะ','วิศวกรรมชีวการแพทย์':'วิศวะ',
+  // ─── สถาปัตย์ ───
   'สถาปัตยกรรมศาสตร์':'สถาปัตย์','สถาปัตยกรรม':'สถาปัตย์','ถาปัต':'สถาปัตย์',
-  // สัตวแพทย์
-  'สัตวแพทยศาสตร์':'สัตวแพทย์','คณะสัตวแพทย์':'สัตวแพทย์','คณะสัตวแพทย์ศาสตร์':'สัตวแพทย์',
-  // พยาบาล
-  'พยาบาลศาสตร์':'พยาบาล',
-  // นิติ
-  'นิติศาสตร์':'นิติ',
-  // เศรษฐศาสตร์
-  'เศรษศาสตร์':'เศรษฐศาสตร์',
-  // สาธารณสุข
-  'สาธารณสุขศาสตร์':'สาธารณสุข','สาธารณะสุข':'สาธารณสุข',
-  // นิเทศ
-  'นิเทศศาสตร์':'นิเทศ',
-  // บัญชี / บริหาร
-  'บริหารธุรกิจ':'บริหาร','การบัญชี':'บัญชี',
+  // ─── สัตวะ (user canonical) ───
+  'สัตวแพทยศาสตร์':'สัตวะ','สัตวแพทย์':'สัตวะ',
+  'คณะสัตวแพทย์':'สัตวะ','คณะสัตวแพทย์ศาสตร์':'สัตวะ','สัตว์แพทย์':'สัตวะ',
+  // ─── พยาบาล ───
+  'พยาบาลศาสตร์':'พยาบาล','คณะพยาบาล':'พยาบาล',
+  'พยาบาลตำรวจ':'พยาบาล','พยาบาลวิชาชีพ':'พยาบาล',
+  // ─── สหเวช ───
+  'สหเวชศาสตร์':'สหเวช','คณะสหเวชศาสตร์':'สหเวช',
+  // ─── รังสีเทคนิค ───
+  'รังสีการแพทย์':'รังสีเทคนิค','รังสี':'รังสีเทคนิค',
+  'สาขารังสีเทคนิค':'รังสีเทคนิค','รังสีเทคนิคและรังสีรักษา':'รังสีเทคนิค',
+  // ─── กายภาพบำบัด ───
+  'กายภาพ':'กายภาพบำบัด','กายภาพบำบัดศาสตร์':'กายภาพบำบัด',
+  // ─── เทคนิคการแพทย์ ───
+  'เทคนิคการเเพทย์':'เทคนิคการแพทย์','เทคนิคแพทย์':'เทคนิคการแพทย์',
+  // ─── นิติ ───
+  'นิติศาสตร์':'นิติ','นิติศาสตร์บัณฑิต':'นิติ',
+  // ─── เศรษฐศาสตร์ ───
+  'เศรษศาสตร์':'เศรษฐศาสตร์','เศรษฐ':'เศรษฐศาสตร์',
+  // ─── สาธารณสุข ───
+  'สาธารณสุขศาสตร์':'สาธารณสุข','สาธารณะสุข':'สาธารณสุข','สาธารณสุขชุมชน':'สาธารณสุข',
+  // ─── นิเทศ ───
+  'นิเทศศาสตร์':'นิเทศ','นิเทศศาสตร์บัณฑิต':'นิเทศ',
+  // ─── บัญชี / บริหาร ───
+  'บริหารธุรกิจ':'บริหาร','การบัญชี':'บัญชี','การจัดการ':'บริหาร',
+  // ─── ฉุกเฉินการแพทย์ ───
+  'ฉุกเฉินการแพทย์':'เวชกิจฉุกเฉิน','เวชกิจ':'เวชกิจฉุกเฉิน',
+  // ─── อักษร ───
+  'อักษรศาสตร์':'อักษร','ศิลปศาสตร์':'อักษร',
+  // ─── ครุ ───
+  'ครุศาสตร์':'ครุ','ศึกษาศาสตร์':'ครุ','คณะครุศาสตร์':'ครุ',
+  // ─── รัฐศาสตร์ ───
+  'รัฐประศาสนศาสตร์':'รัฐศาสตร์','การเมือง':'รัฐศาสตร์',
 };
 const JUNK=new Set(['-','ไม่มี','ไม่ระบุ','อื่นๆ','n/a','none','ไม่','คณะ','na']);
 
@@ -651,7 +672,12 @@ function stripEmoji(s){
   return s.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\uFE0F\u200D\u20E3]/gu,'').trim();
 }
 function normFac(raw){
-  const t=stripEmoji(raw).replace(/\s+/g,' ').trim();
+  let t=stripEmoji(raw)
+    .replace(/เเ/g,'แ')           // fix double-เ → แ (เเพทย์ → แพทย์)
+    .replace(/\s+/g,' ').trim();
+  // Strip leading คณะ/วิชา prefix (คณะแพทย์ → แพทย์)
+  t=t.replace(/^(คณะ|สาขาวิชา|สาขา|ภาควิชา)\s*/,'');
+  // Try exact canonical lookup; otherwise return normalized text
   return FAC_CANONICAL[t]||t;
 }
 function splitFacultyField(raw){
@@ -662,10 +688,12 @@ function splitFacultyField(raw){
   const out=[];
   segs.forEach(seg=>{
     if(!seg.includes(' ')){out.push(seg);return;}
-    // Space-separated: split further only if every token is ≤ 14 chars (short Thai word)
     const toks=seg.split(/\s+/).filter(t=>t.length>1);
-    const maxLen=Math.max(...toks.map(t=>stripEmoji(t).length));
-    if(maxLen<=14&&toks.length>1){out.push(...toks);}
+    if(toks.length<2){out.push(seg);return;}
+    // Majority rule: split if MORE THAN HALF the tokens are ≤ 12 chars
+    // (handles "กายภาพบำบัด อักษร ความสัมพันธ์ระหว่างประเทศ" correctly)
+    const shortCount=toks.filter(t=>stripEmoji(t).length<=12).length;
+    if(shortCount>toks.length/2){out.push(...toks);}
     else{out.push(seg);}
   });
   return out.map(normFac).filter(f=>{
@@ -866,7 +894,14 @@ function getProcessed(){
   return state.rawData.filter(row=>{
     if(state.filters.university!=='all'&&m.university)return row[m.university]===state.filters.university;
     return true;
-  }).map(row=>({dek:(row[m.dek]||'Unknown').trim(),faculty:(row[m.faculty]||'Unknown').trim(),program:m.program?(row[m.program]||'').trim():'',university:m.university?(row[m.university]||'').trim():'',count:rowCount(row)}));
+  }).map(row=>({
+    dek:(row[m.dek]||'Unknown').trim().replace(/เเ/g,'แ'),
+    // Re-apply normFac to catch any duplicates that slipped through the initial transform
+    faculty:normFac((row[m.faculty]||'Unknown').trim()),
+    program:m.program?(row[m.program]||'').trim():'',
+    university:m.university?(row[m.university]||'').trim():'',
+    count:rowCount(row),
+  }));
 }
 function aggregate(data,key){
   const map={};data.forEach(r=>{map[r[key]]=(map[r[key]]||0)+r.count;});
@@ -942,9 +977,26 @@ function handleClick(label){
 function showDetail(title,agg){
   const total=agg.reduce((s,a)=>s+a.value,0);
   document.getElementById('detail-title').textContent=title;
-  document.getElementById('detail-grid').innerHTML=agg.map(({label,value})=>`<div class="detail-item" onclick="handleClick('${label.replace(/'/g,"\\'")}')"><span class="name">${label||'(none)'}</span><span class="badge">${value.toLocaleString()} · ${((value/total)*100).toFixed(1)}%</span></div>`).join('');
+  // Separate meaningful entries (count > 1) from noise (count = 1)
+  const main=agg.filter(a=>a.value>1);
+  const noise=agg.filter(a=>a.value===1);
+  const itemHtml=({label,value})=>`<div class="detail-item" onclick="handleClick('${label.replace(/'/g,"\\'")}')"><span class="name">${label||'(none)'}</span><span class="badge">${value.toLocaleString()} · ${((value/total)*100).toFixed(1)}%</span></div>`;
+  let html=main.map(itemHtml).join('');
+  if(noise.length){
+    html+=`<div id="noise-toggle" onclick="toggleNoise()" style="grid-column:1/-1;text-align:center;padding:8px;cursor:pointer;color:var(--text-sub);font-size:0.82rem;background:var(--chip-bg);border-radius:8px;margin-top:4px;">▼ ${noise.length} รายการที่พบครั้งเดียว (คลิกเพื่อดู)</div>`;
+    html+=`<div id="noise-items" style="display:none;grid-column:1/-1;display:none;">${noise.map(itemHtml).join('')}</div>`;
+  }
+  document.getElementById('detail-grid').innerHTML=html;
   document.getElementById('detail-panel').style.display='block';
   document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function toggleNoise(){
+  const items=document.getElementById('noise-items');
+  const btn=document.getElementById('noise-toggle');
+  if(!items||!btn)return;
+  const show=items.style.display==='none'||items.style.display==='';
+  items.style.display=show?'contents':'none';
+  btn.innerHTML=show?`▲ ซ่อนรายการที่พบครั้งเดียว`:`▼ ${items.children.length} รายการที่พบครั้งเดียว (คลิกเพื่อดู)`;
 }
 function updateBreadcrumb(){
   const bc=document.getElementById('breadcrumb'),d=state.drillDown,L=state.labels;
