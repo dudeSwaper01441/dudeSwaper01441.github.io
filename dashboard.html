@@ -231,6 +231,8 @@
       background: transparent; color: var(--text-sub); transition: all .18s;
     }
     .chart-type-btn.active { background: var(--card); color: #3949ab; font-weight: 700; box-shadow: 0 1px 4px var(--shadow); }
+    .btn-toggle-on { background: #e8eaf6 !important; color: #3949ab !important; font-weight: 700 !important; border: 1.5px solid #9fa8da !important; }
+    body.dark .btn-toggle-on { background: #1e2240 !important; color: #9fa8da !important; border-color: #3949ab !important; }
 
     /* ── STATS ── */
     .stats-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -457,6 +459,10 @@
         <label>&nbsp;</label>
         <button class="btn btn-secondary btn-sm" onclick="openFacultyEditor()">✏️ แก้ไขคณะ</button>
       </div>
+      <div class="ctrl-group">
+        <label>&nbsp;</label>
+        <button id="hide-small-btn" class="btn btn-secondary btn-sm" onclick="toggleHideSmall()" title="Hide entries with only 1 response">👁 Hide singles</button>
+      </div>
       <div class="ctrl-group" style="margin-left:auto;">
         <label>&nbsp;</label>
         <button class="btn btn-secondary btn-sm" onclick="resetToTop()">↩ Reset View</button>
@@ -516,7 +522,7 @@ const state = {
   mapping:{ dek:null, faculty:null, program:null, university:null, count:null },
   labels:{ dek:'Dek Year', faculty:'Faculty', program:'Program', university:'University' },
   filters:{ university:'all' },
-  drillDown:null, chartType:'pie', chart:null,
+  drillDown:null, chartType:'pie', chart:null, hideSmall:false,
   formAnalysis: null,   // set when Google Forms format is detected
   formRawRows: null,    // original raw rows for re-categorization
 };
@@ -766,6 +772,7 @@ const FAC_CANONICAL={
   // ─── จิตวิทยา ───
   'จิตวิทยาคลินิก':'จิตวิทยา','จิตแพทย์':'จิตวิทยา',
   'จิตวิยา':'จิตวิทยา','จิตวิทย':'จิตวิทยา',
+  'จิตวิดยา':'จิตวิทยา',                // ด instead of ท
   // ─── วิทยาศาสตร์ ───
   'วิทย์':'วิทยาศาสตร์','วิทย์ฯ':'วิทยาศาสตร์',
   // ─── วิทยาศาสตร์สุขภาพ ───
@@ -1268,6 +1275,7 @@ function renderChart(data){
   }else{
     agg=aggregate(data.filter(r=>r.dek===d.dek&&r.subfaculty===d.subfaculty),'program');
   }
+  if(state.hideSmall) agg=agg.filter(d=>d.value>1);
   const labels=agg.map(d=>d.label),values=agg.map(d=>d.value);
   const isRound=['pie','doughnut'].includes(state.chartType);
   const manyItems = labels.length > 8;
@@ -1407,6 +1415,12 @@ function setChartType(type){
   renderChart(getProcessed());
 }
 function applyFilters(){state.filters.university=document.getElementById('university-filter').value;buildAndRender();}
+function toggleHideSmall(){
+  state.hideSmall=!state.hideSmall;
+  document.getElementById('hide-small-btn').classList.toggle('btn-toggle-on',state.hideSmall);
+  document.getElementById('hide-small-btn').textContent=state.hideSmall?'👁 Show singles':'👁 Hide singles';
+  renderChart(getProcessed());
+}
 function showAlert(el,msg,type){el.innerHTML=`<div class="alert alert-${type}">${msg}</div>`;}
 
 /* ══════════════════════════════════════════════
