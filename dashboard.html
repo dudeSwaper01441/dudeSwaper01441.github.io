@@ -169,10 +169,24 @@
     .btn-secondary:hover{ background: var(--chip-bg); }
     .btn-danger   { background: #fff0f0; color: #c62828; }
     .btn-danger:hover { background: #ffcdd2; }
-    .btn-ai { background: linear-gradient(135deg,#4a148c,#7b1fa2); color:#fff; border:none; }
-    .btn-ai:hover { background: linear-gradient(135deg,#6a1b9a,#9c27b0); transform:translateY(-1px); box-shadow:0 3px 12px rgba(123,31,162,.4); }
-    .btn-ai:disabled { opacity:.6; cursor:not-allowed; transform:none; }
     .btn-sm { padding: 6px 13px; font-size: 0.82rem; border-radius: 7px; }
+
+    /* ── FACULTY EDITOR ── */
+    .fac-edit-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 13px; background: var(--detail-bg);
+      border: 1.5px solid var(--border); border-radius: 9px; transition: border-color .15s;
+    }
+    .fac-edit-row:hover { border-color: #3949ab; }
+    .fac-edit-name {
+      flex: 1; cursor: pointer; font-size: 0.92rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .fac-edit-name:hover { color: #3949ab; }
+    .fac-edit-pencil { font-size: 0.72rem; opacity: 0; transition: opacity .15s; }
+    .fac-edit-row:hover .fac-edit-pencil { opacity: 1; }
+    .fac-edit-input-wrap { flex: 1; display: flex; align-items: center; gap: 6px; }
+    .fac-edit-input-wrap input { flex: 1; padding: 4px 9px; font-size: 0.9rem; }
 
     .hint { font-size: 0.82rem; color: var(--text-sub); margin-bottom: 12px; line-height: 1.5; }
 
@@ -337,16 +351,6 @@
         <span class="toggle-slider"></span>
       </label>
     </div>
-    <div class="settings-row">
-      <div style="flex:1;margin-right:16px;">
-        <div class="settings-label">✨ Gemini API Key</div>
-        <div class="settings-desc">Used for AI-powered faculty name cleaning. Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#3949ab;">aistudio.google.com</a> — stored only in your browser.</div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-        <input type="password" id="gemini-key-input" placeholder="AIza..." style="width:220px;font-size:0.85rem;" oninput="saveGeminiKey()">
-        <span id="gemini-key-status" style="font-size:0.8rem;color:var(--text-sub);"></span>
-      </div>
-    </div>
   </div>
 
   <!-- DATA SOURCE -->
@@ -427,7 +431,7 @@
       </div>
       <div class="ctrl-group" id="ai-clean-wrap" style="display:none;">
         <label>&nbsp;</label>
-        <button class="btn btn-ai btn-sm" id="ai-clean-btn" onclick="cleanWithGemini()">✨ AI Clean</button>
+        <button class="btn btn-secondary btn-sm" onclick="openFacultyEditor()">✏️ แก้ไขคณะ</button>
       </div>
       <div class="ctrl-group" style="margin-left:auto;">
         <label>&nbsp;</label>
@@ -460,6 +464,20 @@
       &nbsp;·&nbsp; <a href="#" onclick="toggleKeywordList();return false;" style="color:var(--text-sub);">ดูคำสำคัญที่ใช้</a>
       <div id="keyword-list" style="display:none;margin-top:8px;"></div>
     </div>
+  </div>
+
+  <!-- FACULTY EDITOR PANEL -->
+  <div class="card" id="faculty-editor-panel" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+      <div class="card-title" style="margin-bottom:0;">✏️ แก้ไขชื่อคณะ</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="fac-edit-status" style="font-size:0.82rem;color:var(--text-sub);"></span>
+        <button class="btn btn-danger btn-sm" onclick="resetFacultyEdits()">↩ Reset ทั้งหมด</button>
+        <button class="btn btn-secondary btn-sm" onclick="closeFacultyEditor()">✕ ปิด</button>
+      </div>
+    </div>
+    <p class="hint">คลิกที่ชื่อคณะเพื่อแก้ไขหรือ Merge · พิมพ์ชื่อที่มีอยู่แล้วเพื่อรวมกลุ่ม · กด <kbd>Enter</kbd> ยืนยัน · กด <kbd>Esc</kbd> ยกเลิก · ปุ่ม <strong>✕</strong> จัดเป็น "อื่นๆ"</p>
+    <div id="faculty-editor-list" style="display:flex;flex-direction:column;gap:5px;max-height:460px;overflow-y:auto;padding-right:4px;"></div>
   </div>
 
 </div>
@@ -752,6 +770,7 @@ function transformFormsData(rawRows,cols){
   });
 }
 function detectAndApplyForms(rawRows,cols,alrtEl){
+  _facultySnapshot=null;
   if(!isFormsFormat(cols))return false;
   const tr=transformFormsData(rawRows,cols);
   if(!tr||!tr.length)return false;
@@ -847,6 +866,7 @@ function addManualRow(data={}){
 }
 function clearManualData(){document.getElementById('manual-tbody').innerHTML='';for(let i=0;i<4;i++)addManualRow();}
 function applyManualData(){
+  _facultySnapshot=null;
   const rows=[...document.querySelectorAll('#manual-tbody tr')];
   const data=rows.map(tr=>{const inp=tr.querySelectorAll('input');return{dek:inp[0].value.trim(),university:inp[1].value.trim(),faculty:inp[2].value.trim(),program:inp[3].value.trim(),count:inp[4].value.trim()||'1'};}).filter(r=>r.dek);
   if(!data.length){alert('Add at least one row with a dek value.');return;}
@@ -874,6 +894,7 @@ function importCSV(input){
   }});
 }
 function loadSampleData(){
+  _facultySnapshot=null;
   state.rawData=SAMPLE.map(d=>({...d,count:String(d.count)}));
   state.columns=['dek','university','faculty','program','count'];
   state.mapping={dek:'dek',faculty:'faculty',program:'program',university:'university',count:'count'};
@@ -966,8 +987,8 @@ function buildAndRender(){
   state.drillDown=null;document.getElementById('detail-panel').style.display='none';
   updateBreadcrumb();renderChart(data);
   renderFormAnalysis();
-  // Show AI Clean button only when Google Forms data is loaded
-  document.getElementById('ai-clean-wrap').style.display = state.formRawRows ? '' : 'none';
+  // Show Edit Faculties button whenever data is loaded
+  document.getElementById('ai-clean-wrap').style.display = '';
 }
 
 /* ── CHART ── */
@@ -1061,87 +1082,97 @@ function applyFilters(){state.filters.university=document.getElementById('univer
 function showAlert(el,msg,type){el.innerHTML=`<div class="alert alert-${type}">${msg}</div>`;}
 
 /* ══════════════════════════════════════════════
-   GEMINI AI CLEANER
-   Sends unique messy faculty names to Gemini and
-   gets back a canonical mapping. Applied to rawData
-   then re-renders the chart.
+   FACULTY EDITOR
+   Manual rename / merge panel. Click any faculty
+   name to edit it inline. Type an existing name
+   to merge. ✕ sends to "อื่นๆ". Reset restores
+   the snapshot taken when data was first loaded.
    ══════════════════════════════════════════════ */
-function saveGeminiKey(){
-  const v=document.getElementById('gemini-key-input').value.trim();
-  if(v){localStorage.setItem('gemini-key',v);document.getElementById('gemini-key-status').textContent='✅ Saved';}
-  else{localStorage.removeItem('gemini-key');document.getElementById('gemini-key-status').textContent='';}
+let _facultySnapshot = null;
+
+function openFacultyEditor(){
+  if(!state.rawData.length)return;
+  if(!_facultySnapshot) _facultySnapshot=JSON.parse(JSON.stringify(state.rawData));
+  renderFacultyEditor();
+  const panel=document.getElementById('faculty-editor-panel');
+  panel.style.display='block';
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+function closeFacultyEditor(){
+  document.getElementById('faculty-editor-panel').style.display='none';
 }
 
-async function cleanWithGemini(){
-  const apiKey=localStorage.getItem('gemini-key');
-  if(!apiKey){
-    alert('Please enter your Gemini API key in ⚙️ Settings first.\nGet a free key at: aistudio.google.com/app/apikey');
-    document.getElementById('settings-panel').classList.add('open');
-    return;
-  }
-  const uniqueFacs=[...new Set(state.rawData.map(r=>r.faculty))].filter(f=>f&&f!=='Unknown');
-  if(!uniqueFacs.length){alert('No faculty data loaded.');return;}
+function renderFacultyEditor(){
+  // Tally counts from current rawData
+  const counts={};
+  state.rawData.forEach(r=>{
+    const f=r.faculty||'Unknown';
+    counts[f]=(counts[f]||0)+Number(r.count||1);
+  });
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  window._facNames=sorted.map(([n])=>n);
 
-  const btn=document.getElementById('ai-clean-btn');
-  btn.textContent='⏳ กำลังประมวลผล...';btn.disabled=true;
+  document.getElementById('faculty-editor-list').innerHTML=sorted.map(([name,count],i)=>`
+    <div class="fac-edit-row" id="fer-${i}" data-orig="${_esc(name)}">
+      <div class="fac-edit-name" onclick="startFacEdit(${i})">
+        <span>${_esc(name)}</span><span class="fac-edit-pencil">✏️</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+        <span class="stat-chip" style="padding:2px 10px;font-size:0.8rem;">${count.toLocaleString()}</span>
+        <button class="btn btn-danger btn-sm" title="ย้ายไป อื่นๆ" onclick="markFacAsOther('${_escJs(name)}')">✕</button>
+      </div>
+    </div>`).join('');
+}
 
-  const prompt=`You are normalizing Thai university faculty names from student survey responses.
+function _esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _escJs(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
-Return ONLY a valid JSON object (no markdown, no explanation) mapping each input string to its canonical short Thai name.
+function startFacEdit(i){
+  const row=document.getElementById(`fer-${i}`);if(!row)return;
+  const orig=row.dataset.orig;
+  row.querySelector('.fac-edit-name').innerHTML=`
+    <div class="fac-edit-input-wrap">
+      <input id="fei-${i}" type="text" value="${_esc(orig)}" list="fedl-${i}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();commitFacEdit(${i});}if(event.key==='Escape')renderFacultyEditor();">
+      <datalist id="fedl-${i}">${(window._facNames||[]).map(n=>`<option value="${_esc(n)}">`).join('')}</datalist>
+      <button class="btn btn-primary btn-sm" onclick="commitFacEdit(${i})">✓</button>
+      <button class="btn btn-secondary btn-sm" onclick="renderFacultyEditor()">✕</button>
+    </div>`;
+  const inp=document.getElementById(`fei-${i}`);
+  if(inp){inp.focus();inp.select();}
+}
 
-Canonical names to use:
-แพทย์, เภสัช, ทันตะ, สัตวะ, สหเวช, รังสีเทคนิค, กายภาพบำบัด, เทคนิคการแพทย์, พยาบาล, วิศวะ, สถาปัตย์, นิติ, อักษร, ครุ, บริหาร, บัญชี, รัฐศาสตร์, เศรษฐศาสตร์, นิเทศ, สาธารณสุข, จิตวิทยา, วิทยาศาสตร์, มนุษยศาสตร์, สังคม, เกษตร, วิทย์สุขภาพ, เวชกิจฉุกเฉิน
+function commitFacEdit(i){
+  const row=document.getElementById(`fer-${i}`);
+  const inp=document.getElementById(`fei-${i}`);
+  if(!row||!inp)return;
+  const oldName=row.dataset.orig;
+  const newName=inp.value.trim();
+  if(!newName||newName===oldName){renderFacultyEditor();return;}
+  let changed=0;
+  state.rawData=state.rawData.map(r=>{
+    if(r.faculty===oldName){changed++;return{...r,faculty:newName};}
+    return r;
+  });
+  const status=document.getElementById('fac-edit-status');
+  status.textContent=`✅ "${oldName}" → "${newName}" (${changed} rows)`;
+  setTimeout(()=>{ if(status) status.textContent=''; },3000);
+  buildAndRender();
+  renderFacultyEditor();
+}
 
-Rules:
-- Use the canonical names listed above when applicable
-- If clearly junk/not a faculty name, map to null
-- If entry contains multiple faculties, return the most prominent one
-- Keep already-clean names as-is
-- Map all variants of the same faculty to the same canonical name
+function markFacAsOther(name){
+  state.rawData=state.rawData.map(r=>r.faculty===name?{...r,faculty:'อื่นๆ'}:r);
+  buildAndRender();
+  renderFacultyEditor();
+}
 
-Input: ${JSON.stringify(uniqueFacs)}
-
-Output JSON:`;
-
-  try{
-    const res=await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {method:'POST',headers:{'Content-Type':'application/json'},
-       body:JSON.stringify({
-         contents:[{parts:[{text:prompt}]}],
-         generationConfig:{temperature:0.1,maxOutputTokens:4096}
-       })}
-    );
-    if(!res.ok){
-      const err=await res.json().catch(()=>({}));
-      throw new Error(err?.error?.message||`HTTP ${res.status}`);
-    }
-    const data=await res.json();
-    const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
-    // Extract JSON from response (strip any markdown fences)
-    const jsonStr=text.replace(/```json?\n?/g,'').replace(/```/g,'').trim();
-    const jsonMatch=jsonStr.match(/\{[\s\S]*\}/);
-    if(!jsonMatch)throw new Error('Gemini did not return valid JSON. Try again.');
-    const mapping=JSON.parse(jsonMatch[0]);
-
-    // Apply mapping to rawData
-    let changed=0;
-    state.rawData=state.rawData.map(row=>{
-      const norm=mapping[row.faculty];
-      if(norm===null){changed++;return{...row,faculty:'อื่นๆ'};}
-      if(norm&&norm!==row.faculty){changed++;return{...row,faculty:norm};}
-      return row;
-    });
-
-    buildAndRender();
-    btn.textContent=`✅ ${changed} รายการถูกปรับ`;
-    setTimeout(()=>{btn.textContent='✨ AI Clean';btn.disabled=false;},4000);
-
-  }catch(e){
-    console.error(e);
-    btn.textContent='✨ AI Clean';btn.disabled=false;
-    alert(`Gemini error: ${e.message}\n\nCheck your API key in Settings.`);
-  }
+function resetFacultyEdits(){
+  if(!_facultySnapshot){alert('ไม่มีข้อมูลสำรอง — โหลดข้อมูลใหม่อีกครั้ง');return;}
+  if(!confirm('Reset ชื่อคณะทั้งหมดกลับสู่ค่าเริ่มต้น?'))return;
+  state.rawData=JSON.parse(JSON.stringify(_facultySnapshot));
+  buildAndRender();
+  renderFacultyEditor();
 }
 
 /* ── THEME ── */
@@ -1165,12 +1196,6 @@ window.addEventListener('DOMContentLoaded',()=>{
     document.body.classList.add('dark');
     document.getElementById('theme-btn').textContent='☀️';
     document.getElementById('dark-toggle').checked=true;
-  }
-  // Restore saved Gemini API key
-  const savedKey=localStorage.getItem('gemini-key');
-  if(savedKey){
-    document.getElementById('gemini-key-input').value=savedKey;
-    document.getElementById('gemini-key-status').textContent='✅ Saved';
   }
 });
 </script>
