@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compare — TCAS Admissions</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script>if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('pre-dark')</script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f0f2f5;
+      --card:      #ffffff;
+      --text:      #333333;
+      --text-sub:  #666666;
+      --border:    #e0e0e0;
+      --input-bg:  #fafafa;
+      --tab-bg:    #f0f2f5;
+      --chip-bg:   #e8eaf6;
+      --chip-text: #283593;
+      --shadow:    rgba(0,0,0,0.07);
+      --nav-bg:    rgba(255,255,255,0.95);
+      --up:        #2e7d32;
+      --down:      #c62828;
+    }
+    html.pre-dark body, body.dark {
+      --bg:        #0f1117;
+      --card:      #1a1d27;
+      --text:      #e8eaf6;
+      --text-sub:  #9fa8da;
+      --border:    #2e3250;
+      --input-bg:  #12151f;
+      --tab-bg:    #12151f;
+      --chip-bg:   #1e2240;
+      --chip-text: #9fa8da;
+      --shadow:    rgba(0,0,0,0.35);
+      --nav-bg:    rgba(26,29,39,0.97);
+      --up:        #66bb6a;
+      --down:      #ef5350;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; transition: background .3s, color .3s;
+      padding-top: 60px;
+    }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      background: var(--nav-bg); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 8px var(--shadow);
+      transition: background .3s, border-color .3s;
+    }
+    .nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 12px; }
+    .nav-brand { font-size: 1.05rem; font-weight: 800; color: #1a237e; text-decoration: none; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+    body.dark .nav-brand { color: #9fa8da; }
+    .nav-brand span { opacity: .7; font-weight: 500; font-size: 0.88rem; }
+    .nav-links { display: flex; gap: 2px; margin-left: auto; }
+    .nav-link { padding: 7px 15px; border-radius: 8px; color: var(--text-sub); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: all .18s; }
+    .nav-link:hover, .nav-link.active { background: var(--chip-bg); color: #3949ab; }
+    body.dark .nav-link.active, body.dark .nav-link:hover { color: #9fa8da; }
+    .nav-link.active { font-weight: 700; }
+    .nav-icon-btn { width: 36px; height: 36px; border: none; border-radius: 8px; background: var(--tab-bg); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: background .2s; color: var(--text); flex-shrink: 0; }
+    .nav-icon-btn:hover { background: var(--chip-bg); }
+    .nav-hamburger { display: none; margin-left: 4px; }
+    @media (max-width: 600px) {
+      .nav-links { display: none; position: fixed; top: 60px; left: 0; right: 0; background: var(--card); flex-direction: column; padding: 8px 16px 16px; border-bottom: 1px solid var(--border); box-shadow: 0 4px 16px var(--shadow); }
+      .nav-links.open { display: flex; }
+      .nav-hamburger { display: flex; }
+    }
+
+    /* ── PAGE HEADER ── */
+    .page-header { background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 60%, #388e3c 100%); color: white; padding: 24px 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .page-header h1 { font-size: 1.5rem; font-weight: 700; }
+    .page-header p  { font-size: 0.88rem; opacity: 0.75; margin-top: 3px; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+
+    /* ── CARD ── */
+    .card { background: var(--card); border-radius: 14px; box-shadow: 0 2px 14px var(--shadow); padding: 24px; margin-bottom: 20px; transition: background .3s; }
+    .card-title { font-size: 1rem; font-weight: 700; color: #1a237e; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    body.dark .card-title { color: #9fa8da; }
+
+    /* ── INPUTS / BUTTONS ── */
+    .input-row { display: flex; gap: 8px; align-items: center; }
+    input[type="text"], input[type="url"], select {
+      width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px;
+      font-family: 'Sarabun', sans-serif; font-size: 0.9rem; outline: none;
+      transition: border-color .2s, background .3s; background: var(--input-bg); color: var(--text);
+    }
+    input:focus, select:focus { border-color: #2e7d32; background: var(--card); }
+    .btn { padding: 10px 20px; border: none; border-radius: 9px; cursor: pointer; font-family: 'Sarabun', sans-serif; font-size: 0.9rem; font-weight: 600; transition: all .18s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary  { background: #1b5e20; color: #fff; }
+    .btn-primary:hover  { background: #2e7d32; transform: translateY(-1px); }
+    .btn-secondary { background: var(--tab-bg); color: var(--text); }
+    .btn-secondary:hover { background: var(--chip-bg); }
+    .btn-sm { padding: 6px 13px; font-size: 0.82rem; border-radius: 7px; }
+    .hint { font-size: 0.82rem; color: var(--text-sub); margin-bottom: 12px; line-height: 1.5; }
+
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 0.87rem; margin-top: 10px; line-height: 1.5; }
+    .alert-error   { background: #ffebee; color: #b71c1c; border: 1px solid #ffcdd2; }
+    .alert-success { background: #e8f5e9; color: #1b5e20; border: 1px solid #c8e6c9; }
+    .alert-info    { background: #e3f2fd; color: #0d47a1; border: 1px solid #bbdefb; }
+    .loading { display: inline-flex; align-items: center; gap: 8px; color: #555; }
+    .spinner { width: 15px; height: 15px; border: 2px solid #ddd; border-top-color: #2e7d32; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── COMPARE SELECTORS ── */
+    .compare-mode-btns { display: flex; gap: 4px; background: var(--tab-bg); padding: 4px; border-radius: 10px; margin-bottom: 20px; }
+    .mode-btn { flex: 1; padding: 9px 12px; border: none; border-radius: 7px; cursor: pointer; font-family: 'Sarabun', sans-serif; font-size: 0.88rem; background: transparent; color: var(--text-sub); transition: all .2s; }
+    .mode-btn.active { background: var(--card); color: #2e7d32; font-weight: 700; box-shadow: 0 1px 5px var(--shadow); }
+
+    .compare-selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 600px) { .compare-selectors { grid-template-columns: 1fr; } }
+
+    .selector-box { background: var(--tab-bg); border-radius: 12px; padding: 18px; }
+    .selector-box-a { border-left: 4px solid #3949ab; }
+    .selector-box-b { border-left: 4px solid #e53935; }
+    .selector-box label { font-size: 0.8rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px; }
+    .selector-box .sel-title { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+    .sel-a-title { color: #3949ab; }
+    .sel-b-title { color: #e53935; }
+    body.dark .sel-a-title { color: #7986cb; }
+    body.dark .sel-b-title { color: #ef9a9a; }
+
+    /* ── SUMMARY CARDS ── */
+    .summary-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .sum-card { background: var(--card); border-radius: 12px; padding: 18px; border: 1px solid var(--border); text-align: center; }
+    .sum-card .sum-label { font-size: 0.78rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+    .sum-card .sum-value { font-size: 1.8rem; font-weight: 800; line-height: 1; }
+    .sum-card .sum-sub   { font-size: 0.82rem; color: var(--text-sub); margin-top: 4px; }
+    .val-a { color: #3949ab; }
+    .val-b { color: #e53935; }
+    body.dark .val-a { color: #7986cb; }
+    body.dark .val-b { color: #ef9a9a; }
+    .val-up   { color: var(--up); }
+    .val-down { color: var(--down); }
+
+    /* ── CHARTS SIDE BY SIDE ── */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 700px) { .charts-row { grid-template-columns: 1fr; } }
+    .chart-box { background: var(--card); border-radius: 12px; padding: 18px; border: 1px solid var(--border); }
+    .chart-box h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 14px; }
+    .chart-box-a h4 { color: #3949ab; }
+    .chart-box-b h4 { color: #e53935; }
+    body.dark .chart-box-a h4 { color: #7986cb; }
+    body.dark .chart-box-b h4 { color: #ef9a9a; }
+    .chart-box canvas { max-height: 280px; }
+
+    /* ── GROUPED BAR ── */
+    #grouped-chart-wrap { height: 380px; }
+    #grouped-chart-wrap canvas { max-height: 380px; }
+
+    /* ── COMPARISON TABLE ── */
+    .compare-table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+    thead { position: sticky; top: 0; z-index: 1; }
+    th { background: #1a237e; color: #fff; padding: 10px 12px; text-align: left; font-weight: 600; font-size: 0.82rem; }
+    td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+    tr:hover td { background: var(--chip-bg); }
+    .td-a { color: #3949ab; font-weight: 700; }
+    .td-b { color: #e53935; font-weight: 700; }
+    body.dark .td-a { color: #7986cb; }
+    body.dark .td-b { color: #ef9a9a; }
+    .delta-up   { color: var(--up); font-weight: 700; }
+    .delta-down { color: var(--down); font-weight: 700; }
+    .delta-zero { color: var(--text-sub); }
+
+    footer { text-align: center; padding: 28px 16px; color: var(--text-sub); font-size: 0.83rem; }
+    footer .heart { color: #e91e63; animation: hb 1.2s ease-in-out infinite; display: inline-block; }
+    @keyframes hb { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+  </style>
+</head>
+<body>
+
+<!-- ══ NAVBAR ══ -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand">🎓 TCAS <span>Dashboard</span></a>
+    <div class="nav-links" id="nav-links">
+      <a href="index.html"     class="nav-link">Home</a>
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="compare.html"   class="nav-link active">Compare</a>
+    </div>
+    <button class="nav-icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    <button class="nav-icon-btn nav-hamburger" onclick="toggleMobileNav()">☰</button>
+  </div>
+</nav>
+
+<!-- ══ PAGE HEADER ══ -->
+<div class="page-header">
+  <h1>⚖️ Compare</h1>
+  <p>Side-by-side comparison of two dek years or universities</p>
+</div>
+
+<div class="container">
+
+  <!-- STEP 1: LOAD DATA -->
+  <div class="card">
+    <div class="card-title">① Load Data</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div style="flex:1;min-width:240px;">
+        <p class="hint" style="margin-bottom:6px;">Paste a Google Sheets "Publish to web" link, or load the sample data.</p>
+        <div class="input-row">
+          <input type="url" id="sheets-url" placeholder="https://docs.google.com/spreadsheets/d/…">
+          <button class="btn btn-primary" onclick="loadFromSheets()">Load</button>
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="loadSampleData()">🎯 Use Sample Data</button>
+    </div>
+    <div id="load-alert"></div>
+  </div>
+
+  <!-- STEP 2: COMPARE SETUP -->
+  <div class="card" id="compare-setup" style="display:none;">
+    <div class="card-title">② Choose What to Compare</div>
+
+    <div class="compare-mode-btns">
+      <button class="mode-btn active" onclick="setMode('dek')"        id="mode-dek">📅 Dek Year vs Dek Year</button>
+      <button class="mode-btn"        onclick="setMode('university')"  id="mode-uni">🏫 University vs University</button>
+    </div>
+
+    <div class="compare-selectors">
+      <div class="selector-box selector-box-a">
+        <div class="sel-title sel-a-title">🔵 Group A</div>
+        <label id="sel-a-label">Dek Year A</label>
+        <select id="sel-a" onchange="runCompare()"></select>
+      </div>
+      <div class="selector-box selector-box-b">
+        <div class="sel-title sel-b-title">🔴 Group B</div>
+        <label id="sel-b-label">Dek Year B</label>
+        <select id="sel-b" onchange="runCompare()"></select>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;">
+        <label style="font-size:0.78rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:5px;">Filter by University</label>
+        <select id="uni-filter" onchange="runCompare()" style="width:auto;min-width:220px;">
+          <option value="all">All Universities</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: RESULTS -->
+  <div id="compare-results" style="display:none;">
+
+    <!-- Summary cards -->
+    <div class="summary-cards" id="summary-cards"></div>
+
+    <!-- Side-by-side pie charts -->
+    <div class="charts-row">
+      <div class="chart-box chart-box-a">
+        <h4 id="pie-a-title">Group A</h4>
+        <canvas id="pie-a"></canvas>
+      </div>
+      <div class="chart-box chart-box-b">
+        <h4 id="pie-b-title">Group B</h4>
+        <canvas id="pie-b"></canvas>
+      </div>
+    </div>
+
+    <!-- Grouped bar chart -->
+    <div class="card">
+      <div class="card-title">📊 Side-by-Side Comparison — All Faculties</div>
+      <div id="grouped-chart-wrap"><canvas id="grouped-chart"></canvas></div>
+    </div>
+
+    <!-- Comparison table -->
+    <div class="card">
+      <div class="card-title">📋 Detailed Breakdown</div>
+      <div class="compare-table-wrap">
+        <table id="compare-table">
+          <thead>
+            <tr>
+              <th>Faculty / Program</th>
+              <th id="th-a">Group A</th>
+              <th id="th-b">Group B</th>
+              <th>Difference</th>
+              <th>% Change</th>
+            </tr>
+          </thead>
+          <tbody id="compare-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<footer>Made with <span class="heart">♥</span> by p'micmwit36</footer>
+
+<script>
+/* ── DATA ── */
+let allData = [];
+let compareMode = 'dek'; // 'dek' | 'university'
+let pieA = null, pieB = null, groupedChart = null;
+
+const SAMPLE = [
+  {dek:'dek67',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'วิศวกรรมศาสตร์',   program:'วิศวกรรมคอมพิวเตอร์', count:312},
+  {dek:'dek67',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'แพทยศาสตร์',        program:'แพทยศาสตร์บัณฑิต',   count:189},
+  {dek:'dek67',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'นิติศาสตร์',         program:'นิติศาสตร์บัณฑิต',   count:145},
+  {dek:'dek67',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'รัฐศาสตร์',          program:'การปกครอง',           count:98 },
+  {dek:'dek67',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'เศรษฐศาสตร์',       program:'เศรษฐศาสตร์บัณฑิต',  count:134},
+  {dek:'dek67',university:'มหาวิทยาลัยมหิดล',        faculty:'แพทยศาสตร์ศิริราช', program:'แพทยศาสตร์บัณฑิต',   count:210},
+  {dek:'dek67',university:'มหาวิทยาลัยมหิดล',        faculty:'วิทยาศาสตร์',       program:'เทคโนโลยีชีวภาพ',    count:98 },
+  {dek:'dek67',university:'มหาวิทยาลัยมหิดล',        faculty:'เภสัชศาสตร์',       program:'เภสัชศาสตร์บัณฑิต',  count:103},
+  {dek:'dek67',university:'มหาวิทยาลัยธรรมศาสตร์',  faculty:'นิติศาสตร์',         program:'นิติศาสตร์บัณฑิต',   count:167},
+  {dek:'dek67',university:'มหาวิทยาลัยธรรมศาสตร์',  faculty:'เศรษฐศาสตร์',       program:'เศรษฐศาสตร์บัณฑิต',  count:134},
+  {dek:'dek67',university:'มหาวิทยาลัยเกษตรศาสตร์', faculty:'วิศวกรรมศาสตร์',   program:'วิศวกรรมซอฟต์แวร์',  count:95 },
+  {dek:'dek68',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'วิศวกรรมศาสตร์',   program:'วิศวกรรมคอมพิวเตอร์', count:287},
+  {dek:'dek68',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'แพทยศาสตร์',        program:'แพทยศาสตร์บัณฑิต',   count:201},
+  {dek:'dek68',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'นิติศาสตร์',         program:'นิติศาสตร์บัณฑิต',   count:138},
+  {dek:'dek68',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'รัฐศาสตร์',          program:'การปกครอง',           count:156},
+  {dek:'dek68',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'เศรษฐศาสตร์',       program:'เศรษฐศาสตร์บัณฑิต',  count:121},
+  {dek:'dek68',university:'มหาวิทยาลัยมหิดล',        faculty:'แพทยศาสตร์ศิริราช', program:'แพทยศาสตร์บัณฑิต',   count:224},
+  {dek:'dek68',university:'มหาวิทยาลัยมหิดล',        faculty:'วิทยาศาสตร์',       program:'เทคโนโลยีชีวภาพ',    count:104},
+  {dek:'dek68',university:'มหาวิทยาลัยมหิดล',        faculty:'เภสัชศาสตร์',       program:'เภสัชศาสตร์บัณฑิต',  count:112},
+  {dek:'dek68',university:'มหาวิทยาลัยธรรมศาสตร์',  faculty:'นิติศาสตร์',         program:'นิติศาสตร์บัณฑิต',   count:178},
+  {dek:'dek68',university:'มหาวิทยาลัยเกษตรศาสตร์', faculty:'วิศวกรรมศาสตร์',   program:'วิศวกรรมซอฟต์แวร์',  count:102},
+  {dek:'dek69',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'วิศวกรรมศาสตร์',   program:'วิศวกรรมคอมพิวเตอร์', count:298},
+  {dek:'dek69',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'แพทยศาสตร์',        program:'แพทยศาสตร์บัณฑิต',   count:215},
+  {dek:'dek69',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'นิติศาสตร์',         program:'นิติศาสตร์บัณฑิต',   count:141},
+  {dek:'dek69',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'รัฐศาสตร์',          program:'การปกครอง',           count:102},
+  {dek:'dek69',university:'จุฬาลงกรณ์มหาวิทยาลัย',  faculty:'เศรษฐศาสตร์',       program:'เศรษฐศาสตร์บัณฑิต',  count:118},
+  {dek:'dek69',university:'มหาวิทยาลัยมหิดล',        faculty:'แพทยศาสตร์ศิริราช', program:'แพทยศาสตร์บัณฑิต',   count:198},
+  {dek:'dek69',university:'มหาวิทยาลัยธรรมศาสตร์',  faculty:'เศรษฐศาสตร์',       program:'เศรษฐศาสตร์บัณฑิต',  count:143},
+  {dek:'dek69',university:'มหาวิทยาลัยเกษตรศาสตร์', faculty:'วิทยาศาสตร์',       program:'วิทยาการคอมพิวเตอร์', count:87 },
+  {dek:'dek69+1',university:'จุฬาลงกรณ์มหาวิทยาลัย',faculty:'แพทยศาสตร์',        program:'แพทยศาสตร์บัณฑิต',   count:145},
+  {dek:'dek69+1',university:'จุฬาลงกรณ์มหาวิทยาลัย',faculty:'วิศวกรรมศาสตร์',   program:'วิศวกรรมคอมพิวเตอร์', count:89 },
+  {dek:'dek69+1',university:'มหาวิทยาลัยมหิดล',      faculty:'แพทยศาสตร์ศิริราช', program:'แพทยศาสตร์บัณฑิต',   count:167},
+  {dek:'dek69+1',university:'มหาวิทยาลัยธรรมศาสตร์', faculty:'นิติศาสตร์',        program:'นิติศาสตร์บัณฑิต',   count:76 },
+];
+
+/* ── COLORS ── */
+const PALETTE=['#3949ab','#e53935','#43a047','#fb8c00','#8e24aa','#00acc1','#f4511e','#039be5','#d81b60','#00897b','#7cb342','#fdd835','#6d4c41','#546e7a','#5e35b1'];
+const hex2rgba=(hex,a)=>{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;};
+const col=i=>PALETTE[i%PALETTE.length];
+const colA=(i,a=0.82)=>hex2rgba(col(i),a);
+
+/* ── LOAD FROM SHEETS ── */
+async function loadFromSheets(){
+  const url=document.getElementById('sheets-url').value.trim();
+  const alrt=document.getElementById('load-alert');
+  if(!url){showAlert(alrt,'Please enter a URL.','error');return;}
+  const isPub=/\/spreadsheets\/d\/e\//.test(url);
+  let csvUrl=url;
+  if(isPub){
+    if(!csvUrl.includes('output=csv'))csvUrl+=(csvUrl.includes('?')? '&':'?')+'output=csv';
+  }else{
+    const idM=url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    if(!idM){showAlert(alrt,'Invalid URL.','error');return;}
+    const id=idM[1],gid=(url.match(/gid=(\d+)/)||[])[1]||'0';
+    csvUrl=`https://docs.google.com/spreadsheets/d/${id}/pub?output=csv&gid=${gid}`;
+  }
+  showAlert(alrt,'<div class="loading"><div class="spinner"></div> Fetching…</div>','info');
+  try{
+    const res=await fetch(csvUrl,{redirect:'follow'});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const text=await res.text();
+    if(text.trimStart().startsWith('<'))throw new Error('Got HTML — use File → Share → Publish to web → CSV.');
+    const parsed=Papa.parse(text,{header:true,skipEmptyLines:true});
+    if(!parsed.data.length){showAlert(alrt,'Sheet is empty.','error');return;}
+    // Auto-map columns
+    const fields=parsed.meta.fields||[];
+    const guess=(keys)=>fields.find(f=>keys.some(k=>f.toLowerCase().includes(k)))||null;
+    const dekCol=guess(['dek','year','ปี']),facCol=guess(['faculty','คณะ']),progCol=guess(['program','major','สาขา']),uniCol=guess(['university','uni','มหาวิทยาลัย']),cntCol=guess(['count','total','n','จำนวน']);
+    allData=parsed.data.map(r=>({
+      dek:(r[dekCol]||'Unknown').trim(),
+      faculty:(r[facCol]||'Unknown').trim(),
+      program:progCol?(r[progCol]||'').trim():'',
+      university:uniCol?(r[uniCol]||'').trim():'',
+      count:parseFloat(r[cntCol])||1,
+    }));
+    showAlert(alrt,`✅ Loaded ${allData.length} rows.`,'success');
+    initSetup();
+  }catch(e){showAlert(alrt,`Error: ${e.message}`,'error');}
+}
+
+function loadSampleData(){
+  allData=SAMPLE.map(d=>({...d}));
+  showAlert(document.getElementById('load-alert'),'✅ Sample data loaded.','success');
+  initSetup();
+}
+
+/* ── SETUP ── */
+function initSetup(){
+  document.getElementById('compare-setup').style.display='block';
+  populateSelectors();
+  // University filter
+  const unis=[...new Set(allData.map(r=>r.university).filter(Boolean))].sort();
+  const uf=document.getElementById('uni-filter');
+  uf.innerHTML='<option value="all">All Universities</option>'+unis.map(u=>`<option value="${u}">${u}</option>`).join('');
+  runCompare();
+}
+
+function setMode(mode){
+  compareMode=mode;
+  document.getElementById('mode-dek').classList.toggle('active',mode==='dek');
+  document.getElementById('mode-uni').classList.toggle('active',mode==='university');
+  document.getElementById('sel-a-label').textContent=mode==='dek'?'Dek Year A':'University A';
+  document.getElementById('sel-b-label').textContent=mode==='dek'?'Dek Year B':'University B';
+  populateSelectors();
+  runCompare();
+}
+
+function populateSelectors(){
+  const key=compareMode==='dek'?'dek':'university';
+  const vals=[...new Set(allData.map(r=>r[key]).filter(Boolean))].sort();
+  const optA=vals.map((v,i)=>`<option value="${v}" ${i===0?'selected':''}>${v}</option>`).join('');
+  const optB=vals.map((v,i)=>`<option value="${v}" ${i===1?'selected':''}>${v}</option>`).join('');
+  document.getElementById('sel-a').innerHTML=optA;
+  document.getElementById('sel-b').innerHTML=optB;
+}
+
+/* ── AGGREGATE ── */
+function aggregate(data,key){
+  const map={};data.forEach(r=>{map[r[key]]=(map[r[key]]||0)+r.count;});
+  return Object.entries(map).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
+}
+
+function getGroupData(groupVal){
+  const uniFilter=document.getElementById('uni-filter')?.value||'all';
+  return allData.filter(r=>{
+    const matchGroup=compareMode==='dek'?r.dek===groupVal:r.university===groupVal;
+    const matchUni=uniFilter==='all'||r.university===uniFilter;
+    return matchGroup&&matchUni;
+  });
+}
+
+/* ── RUN COMPARE ── */
+function runCompare(){
+  const valA=document.getElementById('sel-a').value;
+  const valB=document.getElementById('sel-b').value;
+  if(!valA||!valB){document.getElementById('compare-results').style.display='none';return;}
+
+  const dataA=getGroupData(valA);
+  const dataB=getGroupData(valB);
+  const totalA=dataA.reduce((s,r)=>s+r.count,0);
+  const totalB=dataB.reduce((s,r)=>s+r.count,0);
+  const diff=totalB-totalA;
+  const pct=totalA===0?0:((diff/totalA)*100);
+
+  // Update table headers
+  document.getElementById('th-a').textContent=valA;
+  document.getElementById('th-b').textContent=valB;
+  document.getElementById('pie-a-title').textContent=`🔵 ${valA}`;
+  document.getElementById('pie-b-title').textContent=`🔴 ${valB}`;
+
+  // Summary cards
+  const diffSign=diff>0?'+':'';
+  const arrow=diff>0?'▲':diff<0?'▼':'—';
+  const cls=diff>0?'val-up':diff<0?'val-down':'delta-zero';
+  document.getElementById('summary-cards').innerHTML=`
+    <div class="sum-card"><div class="sum-label">🔵 ${valA} Total</div><div class="sum-value val-a">${totalA.toLocaleString()}</div><div class="sum-sub">entries</div></div>
+    <div class="sum-card"><div class="sum-label">🔴 ${valB} Total</div><div class="sum-value val-b">${totalB.toLocaleString()}</div><div class="sum-sub">entries</div></div>
+    <div class="sum-card"><div class="sum-label">Difference</div><div class="sum-value ${cls}">${diffSign}${diff.toLocaleString()}</div><div class="sum-sub">${arrow} ${Math.abs(pct).toFixed(1)}%</div></div>
+    <div class="sum-card"><div class="sum-label">Faculties Tracked</div><div class="sum-value">${new Set([...dataA,...dataB].map(r=>r.faculty)).size}</div><div class="sum-sub">unique</div></div>
+  `;
+
+  // Pie charts
+  renderPie('pie-a', aggregate(dataA,'faculty'), valA, [0,2,4,6,8,10]);
+  renderPie('pie-b', aggregate(dataB,'faculty'), valB, [1,3,5,7,9,11]);
+
+  // Grouped bar
+  renderGroupedBar(dataA, dataB, valA, valB);
+
+  // Table
+  renderTable(dataA, dataB, valA, valB);
+
+  document.getElementById('compare-results').style.display='block';
+  document.getElementById('compare-results').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+/* ── PIE CHART ── */
+function renderPie(canvasId, agg, label, colorIdxs){
+  const existing=canvasId==='pie-a'?pieA:pieB;
+  if(existing)existing.destroy();
+  const ctx=document.getElementById(canvasId).getContext('2d');
+  const chart=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:agg.map(d=>d.label),
+      datasets:[{data:agg.map(d=>d.value),backgroundColor:agg.map((_,i)=>colA(colorIdxs?colorIdxs[i%colorIdxs.length]:i,.85)),borderColor:'#fff',borderWidth:2,hoverOffset:8}]
+    },
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{
+        legend:{position:'bottom',labels:{font:{family:'Sarabun',size:11},padding:10,usePointStyle:true}},
+        tooltip:{callbacks:{label:c=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);return ` ${c.label}: ${c.formattedValue} (${((c.parsed/t)*100).toFixed(1)}%)`;},},bodyFont:{family:'Sarabun'},titleFont:{family:'Sarabun'}}
+      }
+    }
+  });
+  if(canvasId==='pie-a')pieA=chart; else pieB=chart;
+}
+
+/* ── GROUPED BAR ── */
+function renderGroupedBar(dataA, dataB, labelA, labelB){
+  if(groupedChart){groupedChart.destroy();groupedChart=null;}
+  const allFaculties=[...new Set([...dataA,...dataB].map(r=>r.faculty))].sort();
+  const aggA=Object.fromEntries(aggregate(dataA,'faculty').map(d=>[d.label,d.value]));
+  const aggB=Object.fromEntries(aggregate(dataB,'faculty').map(d=>[d.label,d.value]));
+  const valuesA=allFaculties.map(f=>aggA[f]||0);
+  const valuesB=allFaculties.map(f=>aggB[f]||0);
+  const ctx=document.getElementById('grouped-chart').getContext('2d');
+  groupedChart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:allFaculties,
+      datasets:[
+        {label:labelA,data:valuesA,backgroundColor:hex2rgba('#3949ab',.8),borderColor:'#3949ab',borderWidth:1.5,borderRadius:5},
+        {label:labelB,data:valuesB,backgroundColor:hex2rgba('#e53935',.8),borderColor:'#e53935',borderWidth:1.5,borderRadius:5},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{font:{family:'Sarabun',size:12},padding:14,usePointStyle:true}},
+        tooltip:{bodyFont:{family:'Sarabun'},titleFont:{family:'Sarabun'}}
+      },
+      scales:{
+        x:{ticks:{font:{family:'Sarabun',size:11}},grid:{color:'rgba(0,0,0,0.04)'}},
+        y:{ticks:{font:{family:'Sarabun'}},grid:{color:'rgba(0,0,0,0.04)'},beginAtZero:true}
+      }
+    }
+  });
+}
+
+/* ── TABLE ── */
+function renderTable(dataA, dataB, labelA, labelB){
+  const allFaculties=[...new Set([...dataA,...dataB].map(r=>r.faculty))].sort();
+  const aggA=Object.fromEntries(aggregate(dataA,'faculty').map(d=>[d.label,d.value]));
+  const aggB=Object.fromEntries(aggregate(dataB,'faculty').map(d=>[d.label,d.value]));
+  document.getElementById('compare-tbody').innerHTML=allFaculties.map(f=>{
+    const a=aggA[f]||0,b=aggB[f]||0,diff=b-a;
+    const pct=a===0?(b>0?'+100%':'—'):`${diff>=0?'+':''}${((diff/a)*100).toFixed(1)}%`;
+    const cls=diff>0?'delta-up':diff<0?'delta-down':'delta-zero';
+    const sign=diff>0?'+':'';
+    return `<tr>
+      <td>${f}</td>
+      <td class="td-a">${a.toLocaleString()}</td>
+      <td class="td-b">${b.toLocaleString()}</td>
+      <td class="${cls}">${sign}${diff.toLocaleString()}</td>
+      <td class="${cls}">${pct}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── THEME ── */
+function toggleTheme(){
+  const dark=!document.body.classList.contains('dark');
+  document.body.classList.toggle('dark',dark);
+  localStorage.setItem('theme',dark?'dark':'light');
+  document.getElementById('theme-btn').textContent=dark?'☀️':'🌙';
+}
+function toggleMobileNav(){document.getElementById('nav-links').classList.toggle('open');}
+function showAlert(el,msg,type){el.innerHTML=`<div class="alert alert-${type}">${msg}</div>`;}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  if(localStorage.getItem('theme')==='dark'){
+    document.body.classList.add('dark');
+    document.getElementById('theme-btn').textContent='☀️';
+  }
+});
+</script>
+</body>
+</html>
