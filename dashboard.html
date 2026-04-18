@@ -776,10 +776,16 @@ const FAC_CANONICAL={
   'ฉุกเฉินการแพทย์':'เวชกิจฉุกเฉิน','เวชกิจ':'เวชกิจฉุกเฉิน',
   'สายสุขภาพ สาขาฉุกเฉินการแพทย์':'เวชกิจฉุกเฉิน',
   'ฉุกเฉิน':'เวชกิจฉุกเฉิน',
-  'ฉุกเฉินการแพท':'เวชกิจฉุกเฉิน',     // truncated (user reported)
+  'ฉุกเฉินการแพท':'เวชกิจฉุกเฉิน',     // truncated
   'อุกเฉินการแพท':'เวชกิจฉุกเฉิน',     // อุ instead of ฉุ
   'อุกเฉินการแพทย์':'เวชกิจฉุกเฉิน',
   'อุกเฉิน':'เวชกิจฉุกเฉิน','ฉุกเฉินแพทย์':'เวชกิจฉุกเฉิน',
+  'ฉุกเฉินการแพทย':'เวชกิจฉุกเฉิน',    // missing ์
+  'ฉุกเฉินการแพ':'เวชกิจฉุกเฉิน',      // more truncated
+  'ฉุกเฉิน การแพทย์':'เวชกิจฉุกเฉิน', // space in middle
+  'เวชศาสตร์ฉุกเฉิน':'เวชกิจฉุกเฉิน', // alternative formal name
+  'เวชศาสตร์ฉุกเฉินและนิติเวช':'เวชกิจฉุกเฉิน',
+  'paramedic':'เวชกิจฉุกเฉิน',
   'emergency':'เวชกิจฉุกเฉิน','emt':'เวชกิจฉุกเฉิน',
   // ─── แพทย์แผนไทย ───
   'แพทย์แผนไทย':'แพทย์แผนไทย','แพทยศาสตร์แผนไทย':'แพทย์แผนไทย',
@@ -1227,7 +1233,9 @@ function getProcessed(){
     if(state.filters.university!=='all'&&m.university)return row[m.university]===state.filters.university;
     return true;
   }).map(row=>{
-    const subfaculty=normFac(cleanThai(row[m.faculty]||'Unknown'));
+    // Double-pass: normFac then re-apply FAC_CANONICAL as safety net for encoding edge cases
+    const _sf0=normFac(cleanThai(row[m.faculty]||'Unknown'));
+    const subfaculty=FAC_CANONICAL[_sf0]||_sf0;
     let faculty=FAC_PARENT[subfaculty]||subfaculty;
     // Auto-prefix: "วิศวะคอมพิวเตอร์" → วิศวะ, "เทคนิคการแพทสาขารังสี" → เทคนิคการแพทย์
     if(faculty===subfaculty){
@@ -1248,8 +1256,9 @@ function getProcessed(){
 function aggregate(data,key){
   const map={};
   data.forEach(r=>{
-    // Normalize key one final time to ensure Unicode variants merge correctly
-    const k=cleanThai(r[key]||'Unknown');
+    // Normalize key one final time; re-apply canonical for safety on faculty/subfaculty fields
+    const raw=cleanThai(r[key]||'Unknown');
+    const k=(key==='faculty'||key==='subfaculty')?(FAC_CANONICAL[raw]||raw):raw;
     map[k]=(map[k]||0)+r.count;
   });
   return Object.entries(map).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
