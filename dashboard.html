@@ -1014,7 +1014,7 @@ function renderChart(data){
             if(!state.drillDown){subset=d2.filter(r=>r.dek===lbl);gk='faculty';gkLabel=state.labels.faculty;}
             else if(state.drillDown.level==='faculty'){subset=d2.filter(r=>r.dek===state.drillDown.dek&&r.faculty===lbl);gk='program';gkLabel=state.labels.program;}
             else return '';
-            const top=aggregate(subset,gk).slice(0,3);
+            const top=aggregate(subset,gk).filter(a=>a.label&&a.label!=='Unknown'&&a.label!=='').slice(0,3);
             return top.length?['',`Top ${gkLabel}:`,...top.map(a=>`  • ${a.label}: ${a.value}`)]:'';
           }
         },bodyFont:{family:'Sarabun',size:13},titleFont:{family:'Sarabun',size:13}}
