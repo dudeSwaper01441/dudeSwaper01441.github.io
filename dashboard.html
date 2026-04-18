@@ -183,6 +183,27 @@
     .mapper-lbl-wrap span { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
     .mapper-lbl-wrap input { width: 120px; font-size: 0.85rem; }
 
+    /* ── FORM ANALYSIS ── */
+    #form-analysis-panel { display: none; }
+    .form-analysis-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .form-analysis-sub { font-size: 0.83rem; color: var(--text-sub); }
+    .form-cat-row { margin-bottom: 18px; }
+    .form-cat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 10px; }
+    .form-cat-label { font-size: 0.95rem; font-weight: 700; }
+    .form-cat-count { font-size: 0.88rem; color: var(--text-sub); white-space: nowrap; }
+    .form-cat-count strong { color: var(--text); font-size: 1rem; }
+    .form-cat-bar-track { background: var(--border); border-radius: 99px; height: 10px; overflow: hidden; }
+    .form-cat-bar-fill { height: 100%; border-radius: 99px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+    .form-cat-hint { font-size: 0.78rem; color: var(--text-sub); margin-top: 4px; }
+    .form-dek-btn { padding: 6px 14px; background: var(--chip-bg); border: none; border-radius: 8px; color: var(--text-sub); font-family:'Sarabun',sans-serif; font-size:0.83rem; cursor:pointer; transition:.15s; }
+    .form-dek-btn:hover { background: var(--border); color: var(--text); }
+    .form-dek-table { width:100%; border-collapse:collapse; margin-top:14px; font-size:0.83rem; }
+    .form-dek-table th { text-align:left; padding:7px 10px; background:var(--chip-bg); color:var(--text-sub); font-weight:700; border-bottom:2px solid var(--border); }
+    .form-dek-table td { padding:7px 10px; border-bottom:1px solid var(--border); }
+    .form-dek-table tr:last-child td { border-bottom:none; }
+    .form-dek-table tr:hover td { background:var(--row-hover); }
+    .form-keyword-notice { margin-top:16px; padding:10px 14px; background:var(--chip-bg); border-radius:10px; font-size:0.78rem; color:var(--text-sub); line-height:1.6; }
+
     /* ── CONTROLS ── */
     .controls-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 18px; }
     .ctrl-group label { font-size: 0.78rem; color: var(--text-sub); display: block; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
@@ -405,6 +426,24 @@
     </div>
   </div>
 
+  <!-- FORM ANALYSIS PANEL -->
+  <div class="card" id="form-analysis-panel">
+    <div class="form-analysis-header">
+      <div>
+        <div class="card-title" style="margin-bottom:2px;">📊 สรุปภาพรวมความต้องการ</div>
+        <div class="form-analysis-sub" id="form-analysis-sub"></div>
+      </div>
+      <button class="form-dek-btn" onclick="toggleDekBreakdown()" id="dek-breakdown-btn">📅 แยกตาม Dek</button>
+    </div>
+    <div id="form-cats-list"></div>
+    <div id="form-dek-breakdown" style="display:none;"></div>
+    <div class="form-keyword-notice">
+      ⚠️ ระบบใช้การจับคำสำคัญ (keyword matching) — คำตอบ 1 ข้อสามารถอยู่ได้หลายหมวดหมู่
+      &nbsp;·&nbsp; <a href="#" onclick="toggleKeywordList();return false;" style="color:var(--text-sub);">ดูคำสำคัญที่ใช้</a>
+      <div id="keyword-list" style="display:none;margin-top:8px;"></div>
+    </div>
+  </div>
+
 </div>
 
 <footer>Made with <span class="heart">♥</span> by p'micmwit36</footer>
@@ -417,7 +456,121 @@ const state = {
   labels:{ dek:'Dek Year', faculty:'Faculty', program:'Program', university:'University' },
   filters:{ university:'all' },
   drillDown:null, chartType:'pie', chart:null,
+  formAnalysis: null,   // set when Google Forms format is detected
+  formRawRows: null,    // original raw rows for re-categorization
 };
+
+/* ══════════════════════════════════════════════
+   FORM RESPONSE CATEGORIZER
+   Keyword-based classification of Thai open-ended
+   survey responses into 6 community need categories.
+   ══════════════════════════════════════════════ */
+const FORM_CATS = [
+  { id:'knowledge', emoji:'📚', name:'ศูนย์รวมความรู้',        en:'Knowledge Hub',
+    color:'#3949ab',
+    keys:['สรุปเนื้อหา','สูตร','โจทย์','แนวข้อสอบ','เฉลย','ชีท','เนื้อหา','ทบทวน','หนังสือ','ฝึกทำ','ข้อสอบ','แนว','ฝึก','คอนเทนต์','วิชา','ความรู้','สูตรสำคัญ'],
+    hint:'ชีทสรุป · แนวข้อสอบ · โจทย์พร้อมเฉลย' },
+  { id:'peer',      emoji:'🤝', name:'เพื่อนช่วยเพื่อน',       en:'Peer Support',
+    color:'#2e7d32',
+    keys:['เพื่อน','ติว','ปรึกษา','ช่วยกัน','แชร์','ด้วยกัน','พากัน','คุย','แลกเปลี่ยน','คอมมู','ร่วมกัน','ซึ่งกันและกัน','เมดเฟรน','กลุ่ม'],
+    hint:'เพื่อนอ่านหนังสือ · จับกลุ่มติว · แลกเปลี่ยนความรู้' },
+  { id:'guidance',  emoji:'🧭', name:'การแนะแนว',              en:'Guidance & Experience',
+    color:'#e65100',
+    keys:['รุ่นพี่','แนะนำ','พอร์ต','portfolio','ประสบการณ์','แนะแนว','ไกด์','แนวทาง','สัมภาษณ์','คอร์ส','ค่าย','ที่เรียน','ติวเตอร์'],
+    hint:'รุ่นพี่แนะนำ · รีวิวพอร์ต · ประสบการณ์จริง' },
+  { id:'safe',      emoji:'❤️', name:'พื้นที่ปลอดภัย',         en:'Positive & Safe Env',
+    color:'#c62828',
+    keys:['เป็นกันเอง','ปลอดภัย','เฟรนลี่','friendly','ไม่กดดัน','บรรยากาศ','ฮีล','กำลังใจ','อบอุ่น','สบาย','ไม่ตึง','ไม่เครียด','ฝ่าฟัน','ซัพพอร์ต','บลัฟ','ก่อกวน'],
+    hint:'บรรยากาศเป็นกันเอง · ไม่กดดัน · ให้กำลังใจกัน' },
+  { id:'news',      emoji:'📢', name:'อัปเดตข่าวสาร',          en:'News & Updates',
+    color:'#00838f',
+    keys:['ข่าว','อัปเดต','สมัคร','ประกาศ','กำหนดการ','แจ้ง','ข่าวสาร','ลงทะเบียน','รับสมัคร','แจ้งเตือน','ค่าย','กิจกรรม'],
+    hint:'ข่าวสมัครสอบ · กำหนดการค่าย · ประกาศสำคัญ' },
+  { id:'manage',    emoji:'⚙️', name:'การจัดการเป็นระบบ',       en:'Structured Management',
+    color:'#546e7a',
+    keys:['แอดมิน','กฎ','ระบบ','จัดการ','หมวด','แบ่ง','กติกา','ระเบียบ','ตรวจสอบ','คัดกรอง','ดูแล','ก่อกวน','แบ่งรุ่น','คัดคน'],
+    hint:'กฎชัดเจน · แอดมินดูแลดี · แบ่งหมวดแชท' },
+];
+
+function runFormCategorization(rawRows, cols) {
+  const skipSigs = ['ประทับเวลา','เป็น dek','เป็นdek','อยากเข้าคณะ'];
+  const textCols = cols.filter(c => !skipSigs.some(s => c.includes(s)));
+  const dekCol   = cols.find(c => c.includes('เป็น dek') || c.includes('เป็นdek'));
+  const catCounts = Object.fromEntries(FORM_CATS.map(c => [c.id, 0]));
+  const perRow = [];
+  rawRows.forEach(row => {
+    const text = textCols.map(c => (row[c]||'').toLowerCase()).join(' ');
+    const matched = FORM_CATS.filter(cat =>
+      cat.keys.some(kw => text.includes(kw.toLowerCase()))
+    );
+    matched.forEach(cat => catCounts[cat.id]++);
+    perRow.push({
+      dek: normalizeDekStr(row[dekCol]||'Unknown'),
+      cats: matched.map(c => c.id),
+    });
+  });
+  const total = rawRows.length;
+  const cats = FORM_CATS
+    .map(cat => ({
+      ...cat,
+      count: catCounts[cat.id],
+      pct: total > 0 ? (catCounts[cat.id] / total * 100).toFixed(1) : '0.0',
+    }))
+    .sort((a, b) => b.count - a.count);
+  // Per-dek breakdown
+  const dekList = [...new Set(perRow.map(r => r.dek))].sort();
+  const byDek = {};
+  dekList.forEach(dek => {
+    byDek[dek] = Object.fromEntries(FORM_CATS.map(c => [c.id, 0]));
+    perRow.filter(r => r.dek === dek).forEach(r => r.cats.forEach(id => byDek[dek][id]++));
+  });
+  return { total, cats, perRow, dekList, byDek };
+}
+
+function renderFormAnalysis() {
+  const panel = document.getElementById('form-analysis-panel');
+  if (!state.formAnalysis) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  const { total, cats, dekList, byDek } = state.formAnalysis;
+  const maxCount = Math.max(...cats.map(c => c.count), 1);
+  document.getElementById('form-analysis-sub').textContent =
+    `จากทั้งหมด ${total} คำตอบ · ${cats.reduce((s,c)=>s+c.count,0)} votes รวมทุกหมวด`;
+  // Category bars
+  document.getElementById('form-cats-list').innerHTML = cats.map(cat => `
+    <div class="form-cat-row">
+      <div class="form-cat-top">
+        <span class="form-cat-label">${cat.emoji} ${cat.name} <span style="font-weight:400;font-size:0.8em;color:var(--text-sub);">(${cat.en})</span></span>
+        <span class="form-cat-count"><strong>${cat.count}</strong> คน &nbsp;·&nbsp; ${cat.pct}%</span>
+      </div>
+      <div class="form-cat-bar-track">
+        <div class="form-cat-bar-fill" style="width:${(cat.count/maxCount*100).toFixed(1)}%;background:${cat.color};"></div>
+      </div>
+      <div class="form-cat-hint">ตัวชี้วัด: ${cat.hint}</div>
+    </div>`).join('');
+  // Per-dek breakdown table (hidden by default)
+  const header = `<tr><th>${state.labels.dek}</th>${cats.map(c=>`<th>${c.emoji} ${c.name}</th>`).join('')}</tr>`;
+  const rows = dekList.map(dek =>
+    `<tr><td><strong>${dek}</strong></td>${cats.map(c=>`<td>${byDek[dek][c.id]||0}</td>`).join('')}</tr>`
+  ).join('');
+  document.getElementById('form-dek-breakdown').innerHTML =
+    `<div style="overflow-x:auto;margin-top:4px;"><table class="form-dek-table"><thead>${header}</thead><tbody>${rows}</tbody></table></div>`;
+  // Keyword list
+  document.getElementById('keyword-list').innerHTML = FORM_CATS.map(cat =>
+    `<div style="margin-bottom:4px;"><strong>${cat.emoji} ${cat.name}:</strong> ${cat.keys.join(', ')}</div>`
+  ).join('');
+}
+
+function toggleDekBreakdown() {
+  const el = document.getElementById('form-dek-breakdown');
+  const btn = document.getElementById('dek-breakdown-btn');
+  const show = el.style.display === 'none';
+  el.style.display = show ? 'block' : 'none';
+  btn.textContent = show ? '📅 ซ่อนตาราง Dek' : '📅 แยกตาม Dek';
+}
+function toggleKeywordList() {
+  const el = document.getElementById('keyword-list');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
 
 /* ── SAMPLE DATA ── */
 const SAMPLE = [
@@ -543,6 +696,9 @@ function detectAndApplyForms(rawRows,cols,alrtEl){
   state.rawData=tr;
   state.columns=['dek','university','faculty','program','count'];
   state.mapping={dek:'dek',faculty:'faculty',program:null,university:null,count:'count'};
+  // Run keyword categorization on the original free-text rows
+  state.formRawRows=rawRows;
+  state.formAnalysis=runFormCategorization(rawRows,cols);
   const dekN=new Set(tr.map(r=>r.dek)).size;
   const facN=new Set(tr.map(r=>r.faculty)).size;
   const total=rawRows.length;
@@ -735,6 +891,7 @@ function buildAndRender(){
   document.getElementById('column-mapper').style.display='none';
   state.drillDown=null;document.getElementById('detail-panel').style.display='none';
   updateBreadcrumb();renderChart(data);
+  renderFormAnalysis();
 }
 
 /* ── CHART ── */
