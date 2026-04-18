@@ -698,7 +698,7 @@ const FAC_CANONICAL={
   'คณะสัตว์แพทย์':'สัตวะ','คณะสัตว์แพทยศาสตร์':'สัตวะ',
   // ─── พยาบาล ───
   'พยาบาลศาสตร์':'พยาบาล','คณะพยาบาล':'พยาบาล',
-  'พยาบาลตำรวจ':'พยาบาล','พยาบาลวิชาชีพ':'พยาบาล',
+  'พยาบาลวิชาชีพ':'พยาบาล',
   // ─── สหเวช ───
   'สหเวชศาสตร์':'สหเวช','คณะสหเวชศาสตร์':'สหเวช',
   // ─── รังสีเทคนิค ───
@@ -734,10 +734,36 @@ const FAC_CANONICAL={
   'สายสุขภาพ':'วิทยาศาสตร์สุขภาพ',
   // ─── อักษร ───
   'อักษรศาสตร์':'อักษร','ศิลปศาสตร์':'อักษร',
-  // ─── ครุ ───
-  'ครุศาสตร์':'ครุ','ศึกษาศาสตร์':'ครุ','คณะครุศาสตร์':'ครุ',
+  // ─── ครุ (ครู = ครุ) ───
+  'ครุศาสตร์':'ครุ','ศึกษาศาสตร์':'ครุ','คณะครุศาสตร์':'ครุ','ครู':'ครุ',
+  'ครูไทย':'ครุ','ครูไทย.':'ครุ','ครุไทย':'ครุ',
   // ─── รัฐศาสตร์ ───
   'รัฐประศาสนศาสตร์':'รัฐศาสตร์','การเมือง':'รัฐศาสตร์',
+};
+
+/* ── SUBTYPE → PARENT MAP ──────────────────────────
+   Entries here are KEPT as subtypes (not merged away).
+   They group under their parent in the main chart but
+   reveal themselves when the user drills into that parent.
+   ─────────────────────────────────────────────────── */
+const FAC_PARENT = {
+  // แพทย์ subtypes
+  'แพทย์ทหาร':         'แพทย์',
+  'แพทย์แผนไทย':      'แพทย์',
+  'แพทย์แผนจีน':      'แพทย์',
+  'แพทย์แผนตะวันออก': 'แพทย์',
+  // พยาบาล subtypes
+  'พยาบาลทหาร':   'พยาบาล',
+  'พยาบาลตำรวจ':  'พยาบาล',
+  // ทันตะ subtypes
+  'ทันตะทหาร':    'ทันตะ',
+  // เภสัช subtypes
+  'เภสัชทหาร':         'เภสัช',
+  'เภสัชอุตสาหกรรม':  'เภสัช',
+  // วิศวะ subtypes
+  'วิศวะทหาร':    'วิศวะ',
+  // สัตวะ subtypes
+  'สัตวะทหาร':    'สัตวะ',
 };
 const JUNK=new Set(['-','ไม่มี','ไม่ระบุ','อื่นๆ','n/a','none','ไม่','คณะ','na',
   'ลังเล','ระหว่าง','ติวเตอร์','อันดับ','เป็น','ค่า','หนู','ผม','ฉัน','เรา',
@@ -1013,14 +1039,18 @@ function getProcessed(){
   return state.rawData.filter(row=>{
     if(state.filters.university!=='all'&&m.university)return row[m.university]===state.filters.university;
     return true;
-  }).map(row=>({
-    dek:cleanThai(row[m.dek]||'Unknown'),
-    // Re-apply normFac + cleanThai to catch any Unicode duplicates that slipped through
-    faculty:normFac(cleanThai(row[m.faculty]||'Unknown')),
-    program:m.program?(row[m.program]||'').trim():'',
-    university:m.university?(row[m.university]||'').trim():'',
-    count:rowCount(row),
-  }));
+  }).map(row=>{
+    const subfaculty=normFac(cleanThai(row[m.faculty]||'Unknown'));
+    const faculty=FAC_PARENT[subfaculty]||subfaculty; // parent group (or same if no parent)
+    return{
+      dek:cleanThai(row[m.dek]||'Unknown'),
+      faculty,
+      subfaculty, // may equal faculty when no subtype exists
+      program:m.program?(row[m.program]||'').trim():'',
+      university:m.university?(row[m.university]||'').trim():'',
+      count:rowCount(row),
+    };
+  });
 }
 function aggregate(data,key){
   const map={};
@@ -1060,9 +1090,16 @@ function renderChart(data){
   if(state.chart){state.chart.destroy();state.chart=null;}
   const ctx=document.getElementById('main-chart').getContext('2d');
   let agg;
-  if(!state.drillDown){agg=aggregate(data,'dek');}
-  else if(state.drillDown.level==='faculty'){agg=aggregate(data.filter(r=>r.dek===state.drillDown.dek),'faculty');}
-  else{agg=aggregate(data.filter(r=>r.dek===state.drillDown.dek&&r.faculty===state.drillDown.faculty),'program');}
+  const d=state.drillDown;
+  if(!d){
+    agg=aggregate(data,'dek');
+  }else if(d.level==='faculty'){
+    agg=aggregate(data.filter(r=>r.dek===d.dek),'faculty');
+  }else if(d.level==='subfaculty'){
+    agg=aggregate(data.filter(r=>r.dek===d.dek&&r.faculty===d.faculty),'subfaculty');
+  }else{
+    agg=aggregate(data.filter(r=>r.dek===d.dek&&r.subfaculty===d.subfaculty),'program');
+  }
   const labels=agg.map(d=>d.label),values=agg.map(d=>d.value);
   const isRound=['pie','doughnut'].includes(state.chartType);
   const manyItems = labels.length > 8;
@@ -1075,9 +1112,15 @@ function renderChart(data){
         tooltip:{callbacks:{
           label:ctx=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return ` ${ctx.label}: ${ctx.formattedValue} (${((ctx.parsed/t)*100).toFixed(1)}%)`;},
           afterLabel:ctx=>{
-            const d2=getProcessed();const lbl=ctx.label;let subset,gk,gkLabel;
-            if(!state.drillDown){subset=d2.filter(r=>r.dek===lbl);gk='faculty';gkLabel=state.labels.faculty;}
-            else if(state.drillDown.level==='faculty'){subset=d2.filter(r=>r.dek===state.drillDown.dek&&r.faculty===lbl);gk='program';gkLabel=state.labels.program;}
+            const d2=getProcessed();const lbl=ctx.label;const dd=state.drillDown;let subset,gk,gkLabel;
+            if(!dd){subset=d2.filter(r=>r.dek===lbl);gk='faculty';gkLabel=state.labels.faculty;}
+            else if(dd.level==='faculty'){
+              subset=d2.filter(r=>r.dek===dd.dek&&r.faculty===lbl);
+              const subtypes=[...new Set(subset.map(r=>r.subfaculty))];
+              gk=subtypes.length>1?'subfaculty':'program';
+              gkLabel=subtypes.length>1?'สาขาย่อย':state.labels.program;
+            }
+            else if(dd.level==='subfaculty'){subset=d2.filter(r=>r.dek===dd.dek&&r.subfaculty===lbl);gk='program';gkLabel=state.labels.program;}
             else return '';
             const top=aggregate(subset,gk).filter(a=>a.label&&a.label!=='Unknown'&&a.label!=='').slice(0,3);
             return top.length?['',`Top ${gkLabel}:`,...top.map(a=>`  • ${a.label}: ${a.value}`)]:'';
@@ -1106,14 +1149,34 @@ function renderCustomLegend(labels, values, show){
 }
 
 function handleClick(label){
-  const data=getProcessed();const L=state.labels;
-  if(!state.drillDown){
+  const data=getProcessed();const L=state.labels;const dd=state.drillDown;
+  if(!dd){
+    // Top → Faculty level
     state.drillDown={level:'faculty',dek:label};updateBreadcrumb();renderChart(data);
     showDetail(`📚 ${L.faculty} — ${label}`,aggregate(data.filter(r=>r.dek===label),'faculty'));
-  }else if(state.drillDown.level==='faculty'){
+
+  }else if(dd.level==='faculty'){
+    // Faculty → check for subtypes first
+    const subset=data.filter(r=>r.dek===dd.dek&&r.faculty===label);
+    const subtypes=[...new Set(subset.map(r=>r.subfaculty))].filter(Boolean);
+    if(subtypes.length>1){
+      // Has subtypes → drill into subfaculty level
+      state.drillDown={level:'subfaculty',dek:dd.dek,faculty:label};updateBreadcrumb();renderChart(data);
+      showDetail(`🔬 ${label} — สาขาย่อย (${dd.dek})`,aggregate(subset,'subfaculty'));
+    }else{
+      // No subtypes → jump straight to program
+      if(!state.mapping.program)return;
+      const sub=subtypes[0]||label;
+      state.drillDown={level:'program',dek:dd.dek,faculty:label,subfaculty:sub};updateBreadcrumb();renderChart(data);
+      showDetail(`📖 ${L.program} — ${label} (${dd.dek})`,aggregate(subset,'program'));
+    }
+
+  }else if(dd.level==='subfaculty'){
+    // Subfaculty → Program
     if(!state.mapping.program)return;
-    state.drillDown={level:'program',dek:state.drillDown.dek,faculty:label};updateBreadcrumb();renderChart(data);
-    showDetail(`📖 ${L.program} — ${label} (${state.drillDown.dek})`,aggregate(data.filter(r=>r.dek===state.drillDown.dek&&r.faculty===label),'program'));
+    const subset=data.filter(r=>r.dek===dd.dek&&r.subfaculty===label);
+    state.drillDown={level:'program',dek:dd.dek,faculty:dd.faculty,subfaculty:label};updateBreadcrumb();renderChart(data);
+    showDetail(`📖 ${L.program} — ${label} (${dd.dek})`,aggregate(subset,'program'));
   }
 }
 function showDetail(title,agg){
@@ -1142,15 +1205,32 @@ function toggleNoise(){
 }
 function updateBreadcrumb(){
   const bc=document.getElementById('breadcrumb'),d=state.drillDown,L=state.labels;
-  if(!d){bc.innerHTML=`<span class="crumb current">All ${L.dek}s</span>`;}
-  else if(d.level==='faculty'){bc.innerHTML=`<span class="crumb" onclick="resetToTop()">All ${L.dek}s</span><span class="sep">›</span><span class="crumb current">${d.dek} — ${L.faculty}</span>`;}
-  else{bc.innerHTML=`<span class="crumb" onclick="resetToTop()">All ${L.dek}s</span><span class="sep">›</span><span class="crumb" onclick="drillToFaculty()">${d.dek} — ${L.faculty}</span><span class="sep">›</span><span class="crumb current">${d.faculty} — ${L.program}</span>`;}
+  if(!d){
+    bc.innerHTML=`<span class="crumb current">All ${L.dek}s</span>`;
+  }else if(d.level==='faculty'){
+    bc.innerHTML=`<span class="crumb" onclick="resetToTop()">All ${L.dek}s</span><span class="sep">›</span><span class="crumb current">${d.dek} — ${L.faculty}</span>`;
+  }else if(d.level==='subfaculty'){
+    bc.innerHTML=`<span class="crumb" onclick="resetToTop()">All ${L.dek}s</span><span class="sep">›</span><span class="crumb" onclick="drillToFaculty()">${d.dek} — ${L.faculty}</span><span class="sep">›</span><span class="crumb current">${d.faculty} — สาขาย่อย</span>`;
+  }else{
+    // program level — show subfaculty crumb only if it differs from faculty
+    const subCrumb=d.subfaculty&&d.subfaculty!==d.faculty
+      ? `<span class="sep">›</span><span class="crumb" onclick="drillToSubfaculty()">${d.subfaculty}</span>`
+      : '';
+    bc.innerHTML=`<span class="crumb" onclick="resetToTop()">All ${L.dek}s</span><span class="sep">›</span><span class="crumb" onclick="drillToFaculty()">${d.dek} — ${L.faculty}</span>${subCrumb}<span class="sep">›</span><span class="crumb current">${d.subfaculty||d.faculty} — ${L.program}</span>`;
+  }
 }
 function drillToFaculty(){
   const dek=state.drillDown?.dek;if(!dek)return;
   state.drillDown={level:'faculty',dek};updateBreadcrumb();
   const data=getProcessed();renderChart(data);
   showDetail(`📚 ${state.labels.faculty} — ${dek}`,aggregate(data.filter(r=>r.dek===dek),'faculty'));
+}
+function drillToSubfaculty(){
+  const d=state.drillDown;if(!d?.faculty)return;
+  state.drillDown={level:'subfaculty',dek:d.dek,faculty:d.faculty};updateBreadcrumb();
+  const data=getProcessed();renderChart(data);
+  const subset=data.filter(r=>r.dek===d.dek&&r.faculty===d.faculty);
+  showDetail(`🔬 ${d.faculty} — สาขาย่อย (${d.dek})`,aggregate(subset,'subfaculty'));
 }
 function resetToTop(){state.drillDown=null;document.getElementById('detail-panel').style.display='none';updateBreadcrumb();renderChart(getProcessed());}
 function setChartType(type){
