@@ -1019,6 +1019,9 @@ function splitFacultyField(raw){
   s=s.replace(/[ก-ฮ][.)]\s*/g,',');
   // Numbered items: "1.เภสัช 2.แพทย์" → treat numbers as delimiters
   s=s.replace(/\d+[.)]\s*/g,',');
+  // Split faculty names that are directly concatenated with no separator e.g. "แพทย์เภสัช" → "แพทย์,เภสัช"
+  const _SF='แพทย์|เภสัช|ทันตะ|วิศวะ|พยาบาล|สัตวะ|สถาปัตย์|ครุ|นิติ|นิเทศ|จิตวิทยา|สาธารณสุข|รังสีเทคนิค|กายภาพบำบัด|เทคนิคการแพทย์|เวชกิจฉุกเฉิน';
+  s=s.replace(new RegExp(`(${_SF})(${_SF})`,'g'),'$1,$2');
   // Extra delimiters: & + | → comma
   s=s
     .replace(/\s*และ\s*/g,',')
