@@ -1003,6 +1003,8 @@ function normFac(raw){
   t=t.replace(/^(คณะ|สาขาวิชา|สาขา|ภาควิชา|และ)\s*/,'');
   // Strip trailing Thai laughter / keyboard mash: 555, !!!!, ????, ~~~~, ...
   t=t.replace(/[5!?~.\s]+$/, '').trim();
+  // Collapse trailing repeated consonants (คั้บบบ→คั้บ, ครับบ→ครับ, นะะ→นะ)
+  t=t.replace(/([ก-ฮ])\1+$/,'$1').trim();
   // Strip trailing polite particles & keyboard-mash variants (คับบบ, ครับบ, ค่าาา, etc.)
   t=t.replace(/\s*(ครับ+|ค่ะ+|ครัฟ+|ค้าบ+|ค้า+|คั้บ+|คับบ*|คับ|ค่า+|ค่าบ+|จ้า+|นะ+|นะคะ|นะครับ|เลย|ด้วย|มากๆ|มาก|ค่จริง|จริงๆ|จริง)$/,'').trim();
   return FAC_CANONICAL[t]||t;
