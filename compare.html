@@ -621,37 +621,46 @@ async function loadFromSheets(){
   const alrt=document.getElementById('load-alert');
   if(!url){showAlert(alrt,'Please enter a URL.','error');return;}
   const isPub=/\/spreadsheets\/d\/e\//.test(url);
-  let csvUrl=url;
+  let urls=[];
   if(isPub){
-    if(!csvUrl.includes('output=csv'))csvUrl+=(csvUrl.includes('?')? '&':'?')+'output=csv';
+    let u=url; if(!u.includes('output=csv'))u+=(u.includes('?')? '&':'?')+'output=csv';
+    urls=[u];
   }else{
     const idM=url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
     if(!idM){showAlert(alrt,'Invalid URL.','error');return;}
     const id=idM[1],gid=(url.match(/gid=(\d+)/)||[])[1]||'0';
-    csvUrl=`https://docs.google.com/spreadsheets/d/${id}/pub?output=csv&gid=${gid}`;
+    urls=[
+      `https://docs.google.com/spreadsheets/d/${id}/pub?output=csv&gid=${gid}`,
+      `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`,
+    ];
   }
   showAlert(alrt,'<div class="loading"><div class="spinner"></div> Fetching…</div>','info');
-  try{
-    const res=await fetch(csvUrl,{redirect:'follow'});
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    const text=await res.text();
-    if(text.trimStart().startsWith('<'))throw new Error('Got HTML — use File → Share → Publish to web → CSV.');
-    const parsed=Papa.parse(text,{header:true,skipEmptyLines:true});
-    if(!parsed.data.length){showAlert(alrt,'Sheet is empty.','error');return;}
-    // Auto-map columns
-    const fields=parsed.meta.fields||[];
-    const guess=(keys)=>fields.find(f=>keys.some(k=>f.toLowerCase().includes(k)))||null;
-    const dekCol=guess(['dek','year','ปี']),facCol=guess(['faculty','คณะ']),progCol=guess(['program','major','สาขา']),uniCol=guess(['university','uni','มหาวิทยาลัย']),cntCol=guess(['count','total','n','จำนวน']);
-    allData=parsed.data.map(r=>({
-      dek:(r[dekCol]||'Unknown').trim(),
-      faculty:(r[facCol]||'Unknown').trim(),
-      program:progCol?(r[progCol]||'').trim():'',
-      university:uniCol?(r[uniCol]||'').trim():'',
-      count:parseFloat(r[cntCol])||1,
-    }));
-    showAlert(alrt,`✅ Loaded ${allData.length} rows.`,'success');
-    initSetup();
-  }catch(e){showAlert(alrt,`Error: ${e.message}`,'error');}
+  let lastErr='';
+  for(const csvUrl of urls){
+    try{
+      const res=await fetch(csvUrl,{redirect:'follow'});
+      if(!res.ok){lastErr=`HTTP ${res.status}`;continue;}
+      const text=await res.text();
+      if(text.trimStart().startsWith('<')){lastErr='Got HTML instead of CSV.';continue;}
+      const parsed=Papa.parse(text,{header:true,skipEmptyLines:true});
+      if(!parsed.data.length){showAlert(alrt,'Sheet is empty.','error');return;}
+      // Auto-map columns
+      const fields=parsed.meta.fields||[];
+      const guess=(keys)=>fields.find(f=>keys.some(k=>f.toLowerCase().includes(k)))||null;
+      const dekCol=guess(['dek','year','ปี']),facCol=guess(['faculty','คณะ']),progCol=guess(['program','major','สาขา']),uniCol=guess(['university','uni','มหาวิทยาลัย']),cntCol=guess(['count','total','n','จำนวน']);
+      allData=parsed.data.map(r=>({
+        dek:(r[dekCol]||'Unknown').trim(),
+        faculty:(r[facCol]||'Unknown').trim(),
+        program:progCol?(r[progCol]||'').trim():'',
+        university:uniCol?(r[uniCol]||'').trim():'',
+        count:parseFloat(r[cntCol])||1,
+      }));
+      showAlert(alrt,`✅ Loaded ${allData.length} rows.`,'success');
+      initSetup();
+      return;
+    }catch(e){lastErr=e.message;}
+  }
+  showAlert(alrt,`<strong>Could not load.</strong> ${lastErr}<br>Try <em>File → Share → Publish to web → CSV</em> and paste that link.`,'error');
 }
 
 function loadSampleData(){
