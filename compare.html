@@ -559,7 +559,7 @@ function loadFormsCSV(input){
       }
       return{dek:r.dek,university:'',faculty,program:'',count:r.count};
     });
-    showAlert(alrt,`✅ โหลดสำเร็จ — ${res.data.length} responses → ${allData.length} รายการ (${new Set(allData.map(r=>r.dek)).size} dek years)','success');
+    showAlert(alrt,`✅ โหลดสำเร็จ — ${res.data.length} responses → ${allData.length} รายการ (${new Set(allData.map(r=>r.dek)).size} dek years)`,'success');
     initSetup();
   }});
 }
