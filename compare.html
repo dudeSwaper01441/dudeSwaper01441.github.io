@@ -648,13 +648,23 @@ async function loadFromSheets(){
       const fields=parsed.meta.fields||[];
       const guess=(keys)=>fields.find(f=>keys.some(k=>f.toLowerCase().includes(k)))||null;
       const dekCol=guess(['dek','year','ปี']),facCol=guess(['faculty','คณะ']),progCol=guess(['program','major','สาขา']),uniCol=guess(['university','uni','มหาวิทยาลัย']),cntCol=guess(['count','total','n','จำนวน']);
-      allData=parsed.data.map(r=>({
-        dek:(r[dekCol]||'Unknown').trim(),
-        faculty:(r[facCol]||'Unknown').trim(),
-        program:progCol?(r[progCol]||'').trim():'',
-        university:uniCol?(r[uniCol]||'').trim():'',
-        count:parseFloat(r[cntCol])||1,
-      }));
+      allData=parsed.data.map(r=>{
+        const _sf0=normFac(cleanThai(r[facCol]||'Unknown'));
+        const subfaculty=FAC_CANONICAL[_sf0]||_sf0;
+        let faculty=FAC_PARENT[subfaculty]||subfaculty;
+        if(faculty===subfaculty){
+          for(const [prefix,parent] of AUTO_PARENTS){
+            if(subfaculty.startsWith(prefix)&&subfaculty.length>prefix.length){faculty=parent;break;}
+          }
+        }
+        return{
+          dek:(r[dekCol]||'Unknown').trim(),
+          faculty,
+          program:progCol?(r[progCol]||'').trim():'',
+          university:uniCol?(r[uniCol]||'').trim():'',
+          count:parseFloat(r[cntCol])||1,
+        };
+      });
       showAlert(alrt,`✅ Loaded ${allData.length} rows.`,'success');
       initSetup();
       return;
