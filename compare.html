@@ -644,8 +644,27 @@ async function loadFromSheets(){
       if(text.trimStart().startsWith('<')){lastErr='Got HTML instead of CSV.';continue;}
       const parsed=Papa.parse(text,{header:true,skipEmptyLines:true});
       if(!parsed.data.length){showAlert(alrt,'Sheet is empty.','error');return;}
-      // Auto-map columns
       const fields=parsed.meta.fields||[];
+      // If this looks like a raw Forms export, use the same pipeline as Forms CSV loader
+      if(isFormsFormat(fields)){
+        const tr=transformFormsData(parsed.data,fields);
+        if(!tr||!tr.length){showAlert(alrt,'ไม่พบข้อมูลคณะในไฟล์นี้','error');return;}
+        allData=tr.map(r=>{
+          const _sf0=normFac(cleanThai(r.faculty||''));
+          const subfaculty=FAC_CANONICAL[_sf0]||_sf0;
+          let faculty=FAC_PARENT[subfaculty]||subfaculty;
+          if(faculty===subfaculty){
+            for(const [prefix,parent] of AUTO_PARENTS){
+              if(subfaculty.startsWith(prefix)&&subfaculty.length>prefix.length){faculty=parent;break;}
+            }
+          }
+          return{dek:r.dek,university:'',faculty,program:'',count:r.count};
+        });
+        showAlert(alrt,`✅ โหลดสำเร็จ — ${parsed.data.length} responses → ${allData.length} รายการ (${new Set(allData.map(r=>r.dek)).size} dek years)`,'success');
+        initSetup();
+        return;
+      }
+      // Structured sheet (pre-aggregated): auto-map columns + clean faculty field
       const guess=(keys)=>fields.find(f=>keys.some(k=>f.toLowerCase().includes(k)))||null;
       const dekCol=guess(['dek','year','ปี']),facCol=guess(['faculty','คณะ']),progCol=guess(['program','major','สาขา']),uniCol=guess(['university','uni','มหาวิทยาลัย']),cntCol=guess(['count','total','n','จำนวน']);
       allData=parsed.data.map(r=>{
